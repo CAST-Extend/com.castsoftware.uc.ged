@@ -1,9 +1,3 @@
-'''
-Created on 24 may 2022
-
-@author: HLR
-'''
-
 import reports
 import argparse
 import os
