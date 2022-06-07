@@ -1,0 +1,23 @@
+{
+  "report_path" : "C:/temp",
+  
+  "aip_name" : "ATCS",
+  "aip_triplet_prefix" : "atcs",
+  
+  "aip_rest_url" : "http://localhost:8080/rest/",
+  "aip_rest_user" : "cast",
+  "aip_rest_password" : "cast",
+  
+  "neo4j_host" : "localhost",
+  "neo4j_port" : "7687",
+  "neo4j_user" : "neo4j",
+  "neo4j_password" : "imaging",
+  
+  "css_host" : "localhost",
+  "css_port" : "2284",
+  "css_user" : "operator",
+  "css_password" : "CastAIP",
+  
+  "imaging_rest_url" : "http://localhost:8083/",
+  "imaging_rest_api_key" : "6r3MqPPQ.9NvrJpsIJX3WcMIOtjS148pajzCDDHV9"
+}
