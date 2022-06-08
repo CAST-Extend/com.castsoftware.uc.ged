@@ -2,15 +2,15 @@
   "report_path" : "C:/temp",
   
   "AIP":{
-    "active":true,    
-    "name":"ATCS",
-    "triplet_prefix":"atcs",
+    "name":"Bamboo",
+    "triplet_prefix":"bamboo",
     "url":"http://localhost:8080/rest/",
     "user":"cast",
     "password":"cast"
   },
 
   "NEO4J": {
+	"active": true,
     "host" : "localhost",
     "port" : "7687",
     "user" : "neo4j",
@@ -20,12 +20,13 @@
   "CSS":{
     "host" : "localhost",
     "port" : "2284",
-    "users" : "operator",
+    "user" : "operator",
     "password" : "CastAIP"  
   },
   
   "IMAGING": {
-    "rest_url" : "http://localhost:8083/",
-    "rest_api_key" : "6r3MqPPQ.9NvrJpsIJX3WcMIOtjS148pajzCDDHV9"
+	"active": true,
+    "url" : "http://sha-dd-imaging:8083/",
+    "api_key" : "tcxRfdPB.wJUbPYl3cul3O7WO7micQAm4AECzJUuY"
   }
 }
