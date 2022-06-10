@@ -1,9 +1,91 @@
-'''
-Created on 24 may 2022
-
-@author: HLR
-'''
 import pandas as pd
+import time
+
+'''
+    Reports from CAST Highlight
+'''
+
+def ProjectBOM(domainId, hl_app_name, report_path, connHL, aip_name, schema_prefix, connCSS):
+    print('Starting the Project BOM report generation...')
+    componentsMapping = ApplicationComponentsMapping(domainId, hl_app_name, connHL)
+    projectInformation = ProjectsInformation(schema_prefix, connCSS)
+    
+    if not projectInformation.empty and len(componentsMapping) > 0:
+    
+        repoNames = []
+        auSheetList = {}
+        outputFile = f'{report_path}/{aip_name}_Project_BOM.xlsx'
+        writer = pd.ExcelWriter(outputFile)
+        
+        frameworkList = []
+        for projectName, projectPath in zip(projectInformation['Project Name'], projectInformation['Project Path']):
+            referenceSplit = projectPath.split("\\")
+            repositoryName = referenceSplit[referenceSplit.index("Analyzed")+1]
+            repoNames.append(repositoryName)
+            projectFolder = '/' + referenceSplit[len(referenceSplit)-2] + '/'
+            
+            auList = []
+            for component in componentsMapping:
+                frameworkPath = component.get("Framework Path")
+                if projectFolder in frameworkPath:
+                    frameworkName = component.get("Framework Name")
+                    frameworkVersion = component.get("Framework Version")
+                    
+                    auDfRow = {}
+                    auDfRow["Framework Name"] = frameworkName
+                    auDfRow["Framework Version"] = frameworkVersion
+                    auDfRow["Framework Path"] = frameworkPath
+                    auList.append(auDfRow)
+                    
+                    fwListRow = {}
+                    fwListRow["Repository Name"] = repositoryName
+                    fwListRow["Project Name"] = projectName
+                    fwListRow["Project Path"] = projectPath
+                    fwListRow["Framework Name"] = frameworkName
+                    fwListRow["Framework Version"] = frameworkVersion
+                    frameworkList.append(fwListRow)
+                    
+            if len(auList) > 0:
+                auDf = pd.DataFrame(auList)
+                if len(projectName)>30:
+                    projectName = projectName[0:29]
+                auSheetList.update({projectName : auDf})
+        
+        frameworkDf = pd.DataFrame(frameworkList)
+        frameworkDf.to_excel(writer, sheet_name="Project_BOM(Bill of Material)", index=False)
+        
+        projectInformation.insert(0,'Repository Name', repoNames, True)
+        projectInformation.to_excel(writer, sheet_name="Project_TechnologyVersion", index=False)
+        
+        for auSheet in auSheetList:
+            sheetName = auSheet
+            if len(sheetName)>30:
+                sheetName = sheetName[0:29]
+            auSheetList[auSheet].to_excel(writer, sheet_name=sheetName, index=False)
+                         
+        writer.save()
+        print('Successfully generated {0}'.format(outputFile))
+        
+def ApplicationComponentsMapping(domainId, hl_app_name, connHL):
+    applicationId = connHL.get_application_id(domainId, hl_app_name)
+    return connHL.get_components_mapping(domainId, applicationId)
+
+def ProjectsInformation(schema_prefix, connCSS):
+    sql = f"""
+        select 
+            object_name as "Project Name", rootpath as "Project Path", '.NET' as "Technology", frameworkversion as "Version"
+        from {schema_prefix}_mngt.cms_net_project
+        union
+        select 
+            object_name as "Project Name", rootpath as "Project Path", 'Java' as "Technology", java_version as "Version"
+        from {schema_prefix}_mngt.cms_j2ee_project
+        union
+        select 
+            object_name as "Project Name", rootpath as "Project Path", 'C++' as "Technology", devenv_usage as "Version"
+        from {schema_prefix}_mngt.cms_cpp_project
+        order by "Project Name"
+    """
+    return connCSS.dfquery(sql)
 
 '''
     Reports from Neo4j Cypher Queries
@@ -21,7 +103,7 @@ def GenericCypherReport(query, sheetName, connNeo4j, outputFile):
 def ApiRepository(app_name, report_path, connNeo4j):
     print('Starting the API Repository report generation...')
     cypher = """  
-        MATCH (m:Module:{0})-[:Contains]->(o1:Object)-[]-(o2:Object)<-[]-(l:Level5)
+        MATCH (m:Module:`{0}`)-[:Contains]->(o1:Object)-[]-(o2:Object)<-[]-(l:Level5)
             WHERE l.Name CONTAINS "API"
             RETURN DISTINCT m.Name as `Repository Name`, COLLECT(DISTINCT l.Name) as `API Name`""".format(app_name)
     outputFile = '{0}/{1}_API_Repository.xlsx'.format(report_path,app_name)
@@ -31,7 +113,7 @@ def ApiRepository(app_name, report_path, connNeo4j):
 def ApiName(app_name, report_path, connNeo4j): 
     print('Starting the API Name report generation...')
     cypher = """
-        MATCH (m:Module:{0})-[:Contains]->(o1:Object)-[]-(o2:Object)<-[]-(l:Level5)
+        MATCH (m:Module:`{0}`)-[:Contains]->(o1:Object)-[]-(o2:Object)<-[]-(l:Level5)
             WHERE l.Name CONTAINS "API"
             RETURN DISTINCT l.Name as `API Name`""".format(app_name)
     
@@ -43,7 +125,7 @@ def CloudReady(app_name, report_path, connNeo4j):
     print('Starting the Cloud Ready report generation...')
     cypher = """
         MATCH (h:HighlightProperty)
-        MATCH(o:{0})-[r:Property]->(op:ObjectProperty)
+        MATCH(o:`{0}`)-[r:Property]->(op:ObjectProperty)
         WHERE op.Id STARTS WITH h.AipId
         AND op.Id ENDS WITH 'CloudReady'
         RETURN o.AipId AS AipId,o.FullName AS PATH,o.Type as Type, 
@@ -59,7 +141,7 @@ def Containerization(app_name, report_path, connNeo4j):
     print('Starting the Containerization report generation...')
     cypher = """
         MATCH (h:HighlightProperty)
-        MATCH(o:GICECAP_22041)-[r:Property]->(op:ObjectProperty)
+        MATCH(o:`{0}`)-[r:Property]->(op:ObjectProperty)
         WHERE op.Id STARTS WITH h.AipId
         AND op.Id ENDS WITH 'Container'
         RETURN o.AipId AS AipId,o.FullName AS PATH,o.Type as Type, r.value AS Value,
@@ -73,13 +155,13 @@ def Containerization(app_name, report_path, connNeo4j):
 def ComplexObjects(app_name, report_path, connNeo4j):
     print('Starting the Complex Objects report generation...')
     queryObjects = '''
-        MATCH (o:Object:{0})-[r]->(p:ObjectProperty) 
+        MATCH (o:Object:`{0}`)-[r]->(p:ObjectProperty) 
             WHERE p.Description CONTAINS 'Cyclomatic Complexity' 
             RETURN DISTINCT 
                 o.AipId as `object_id`,o.Type as `Object Type`, o.FullName as `Object Fullname`, 
                 o.File as `Object Path`, o.Name as `Object Name`,r.value as `Complexity`;'''.format(app_name)
     querySubObjects = """
-        MATCH (o:SubObject:{0})-[r]->(p:ObjectProperty) 
+        MATCH (o:SubObject:`{0}`)-[r]->(p:ObjectProperty) 
             WHERE p.Description CONTAINS 'Cyclomatic Complexity' 
             RETURN DISTINCT 
                 o.AipId as `object_id`,o.Type as `Object Type`, o.FullName as `Object Fullname`, 
@@ -98,7 +180,7 @@ def ComplexObjects(app_name, report_path, connNeo4j):
 def CppRepo(app_name, report_path, connNeo4j): 
     print('Starting the C++ Repo report generation...')
     cypher = """
-        MATCH (o:Object:{0})
+        MATCH (o:Object:`{0}`)
         WHERE o.Type="C/C++ File" 
         RETURN distinct o.Name as `Object Name`, o.FullName as `Object Fullname`, o.Type as `Object Type`""".format(app_name)
     outputFile = '{0}/{1}_C++Repo.xlsx'.format(report_path,app_name)
@@ -108,11 +190,11 @@ def CppRepo(app_name, report_path, connNeo4j):
 def DeadCode(app_name, report_path, connNeo4j):
     print('Starting the Complex Objects report generation...')
     cypher = """
-        MATCH (o:Object:{0}) 
+        MATCH (o:Object:`{0}`) 
             WHERE Not (o)-[]-(:Object)
             RETURN DISTINCT o.Type, o.Name, o.File, o.FullName
         UNION ALL
-        MATCH (o:SubObject:{0}) 
+        MATCH (o:SubObject:`{0}`) 
             WHERE Not (o)-[]-(:SubObject)
             RETURN DISTINCT o.Type, o.Name, o.File, o.FullName""".format(app_name)
     outputFile = '{0}/{1}_Dead_Code.xlsx'.format(report_path,app_name)
@@ -122,7 +204,7 @@ def DeadCode(app_name, report_path, connNeo4j):
 def MainCallingShellProgram(app_name, report_path, connNeo4j): 
     print('Starting the MainCallingShellProgram report generation...')
     cypher = """
-        MATCH (caller:Object:{0})-[:CALL]->(callee:Object:{0})
+        MATCH (caller:Object:`{0}`)-[:CALL]->(callee:Object:`{0}`)
         WHERE caller.Type="SHELL Program" 
         AND NOT (()-[:CALL]->(caller))
         RETURN caller.Name,caller.FullName,caller.Type,callee.Name,callee.FullName,callee.Type""".format(app_name)
@@ -133,7 +215,7 @@ def MainCallingShellProgram(app_name, report_path, connNeo4j):
 def ObjectLOC(app_name, report_path, connNeo4j): 
     print('Starting the Object LOC report generation...')
     cypher = """
-        MATCH (o:Object:{0})-[r]->(p:ObjectProperty) 
+        MATCH (o:Object:`{0}`)-[r]->(p:ObjectProperty) 
         WHERE p.Description CONTAINS "Number of code lines"
         RETURN DISTINCT o.AipId as `Object Id`,o.Type as `Object Type`, 
             o.FullName as `Object Fullname`, o.Name as `Object Name`,
@@ -145,7 +227,7 @@ def ObjectLOC(app_name, report_path, connNeo4j):
 def ShellProgram(app_name, report_path, connNeo4j): 
     print('Starting the Shell Program report generation...')
     cypher = """
-        MATCH (o:Object:{0})
+        MATCH (o:Object:`{0}`)
         WHERE o.Type="SHELL Program"   return distinct o.Name,o.FullName,o.Type""".format(app_name)
     outputFile = '{0}/{1}_Shell_Program.xlsx'.format(report_path,app_name)
     sheetName = 'ShellProgram_list'
@@ -214,7 +296,7 @@ def NetProjectInformation(app_name, schema_prefix, report_path, connCSS):
     outputFile = '{0}/{1}_Net_Project_Information.xlsx'.format(report_path,app_name) 
     sheetName = 'Results'  
     GenericSQLReport(sql, sheetName, connCSS, outputFile)
-    
+
 def Repository_Technology(app_name, schema_prefix, report_path, connCSS):
     print('Starting the Repository Technology report generation...')
     sql =f'''
@@ -242,7 +324,7 @@ def Technology_LOC(app_name, schema_prefix, report_path, connCSS):
                     like '%%N/A%%' and t3.object_language_name not like '%%Universal Analyzer Language%%' and t3.object_language_name not like 'COM' and 
                      t3.object_language_name not like '.NET' and object_type_Str not in ('File which contains source code') order by 1 )) temp 
         group by "Technology Name" order by 1""".format(schema_prefix)
-    sql2 = 'Pending query for 2nd sheet'
+    #sql2 = 'Pending query for 2nd sheet'
     outputFile = '{0}/{1}_Technology_LOC.xlsx'.format(report_path,app_name)  
     sheetName = 'Technology_LOC'  
     GenericSQLReport(sql, sheetName, connCSS, outputFile)
@@ -265,20 +347,20 @@ def GenerateActionPlanRulesReports(app_name, schema_prefix, report_path, connAip
     rules = connAipRest.get_action_plan_rules(schema_prefix)
     for (rule_id, rule_name) in rules:
         print('Starting report generation for rule: {0}'.format(rule_name))
-        filename = CleanRuleNameForReport(rule_name)
+        filename = CleanNameForReport(rule_name)
         GenericRuleResultsReport(rule_id, schema_prefix, connAipRest, '{0}/{1}_{2}.xlsx'.format(report_path,app_name,filename))
 
 def GenerateRulesByKeywordReports(app_name, schema_prefix, report_path, connAipRest, keyword):
     rules = connAipRest.get_rules_by_keyword(schema_prefix, keyword)
     for (rule_id, rule_name) in rules:
         print('Starting report generation for rule: {0}'.format(rule_name))
-        filename = CleanRuleNameForReport(rule_name)
+        filename = CleanNameForReport(rule_name)
         GenericRuleResultsReport(rule_id, schema_prefix, connAipRest, '{0}/{1}_{2}.xlsx'.format(report_path,app_name,filename))
 
-def CleanRuleNameForReport(rule_name):
+def CleanNameForReport(complex_name):
     forbidden_chars = '"*\\/\'.|?:<>(),'
     space = ' '
-    filename = ''.join([x if x not in forbidden_chars else '' for x in rule_name])
+    filename = ''.join([x if x not in forbidden_chars else '' for x in complex_name])
     filename = ''.join([x if x not in space else '_' for x in filename])
     if len(filename) >= 100:
         filename = filename[:100]
@@ -287,9 +369,48 @@ def CleanRuleNameForReport(rule_name):
 '''
     Reports from Imaging
 '''
-def GenerateAllImagingReportsAsync(app_name, connImagingRest):
-    for report_id in range(1,12):
-        connImagingRest.ReportsGeneration(app_name, report_id)
+
+def GenerateImagingReportsAsync(app_name, report_path, standardReportsList, connImagingRest, retriesNumber, retryTime):
+    standardReportsUuid = []
+    for report in standardReportsList:
+        standardReportsUuid.append(connImagingRest.ReportsGeneration(app_name, GetReportId(report)))
+    i = 0
+    while i < retriesNumber and len(standardReportsUuid) > 0:
+        time.sleep(retryTime)
+        standardReportsUuid = CheckStatusAndDownloadReport(app_name, report_path, connImagingRest, standardReportsUuid)
+        i = i + 1
+
+def CheckStatusAndDownloadReport(appName, report_path, connImagingRest, standardReportsUuid):
+    reportStatus = connImagingRest.ReportStatus()
+    pendingReports = standardReportsUuid
+    print(f'Pending reports: {pendingReports}')
+    for report in pendingReports:
+        status = reportStatus['success'][report]['Status']
+        reportName = reportStatus['success'][report]['ReportName']
+        print(f'Report {report} Status {status} Name {reportName}')
+        if status == 'Done':
+            report_id = GetReportId(reportName)
+            outputFile = f'{report_path}/{appName}_{CleanNameForReport(reportName)}.csv'
+            print(f'Generating Report ID {report_id} - {outputFile})')
+            StandardImagingReport(appName, outputFile, report_id, connImagingRest)
+            standardReportsUuid.remove(report)
+    return standardReportsUuid
+    
+def GetReportId(reportName):
+        switcher = {
+            'Relation between Objects And DataSources' : '1',
+            'Relation between DBTables And DBObjects' : '2',
+            'Relation between DataSources And Transactions' : '3',
+            'Relation between Transactions And Objects' : '4',
+            'Relation between Transactions And DataSources' : '5',
+            'Transactions Complexity' : '6',
+            'Most Referenced Objects' : '7',
+            'Relation between Modules' : '8',
+            'Relation between Modules and Transactions' : '9',
+            "Modules' Complexity" : '10',
+            'Relation between Modules and Objects' : '11'
+            }
+        return switcher.get(reportName, 0)    
 
 def StandardImagingReport(app_name, outputFile, report_id, connImagingRest):
     dtf_results = connImagingRest.GetReport(app_name, report_id)
@@ -299,40 +420,6 @@ def StandardImagingReport(app_name, outputFile, report_id, connImagingRest):
     else:
         print('No results available')
 
-def RelationsBetweenObjectsAndDataSources(app_name, report_path, connImagingRest):
-    report_id = '1'
-    outputFile = '{0}/{1}_RelationsBetweenObjectsAndDataSources.xlsx'.format(report_path,app_name)
-    StandardImagingReport(app_name, outputFile, report_id, connImagingRest)
-
-def MostReferencedObjects(app_name, report_path, connImagingRest):
-    report_id = '7'
-    outputFile = '{0}/{1}_MostReferencedObjects.xlsx'.format(report_path,app_name)
-    StandardImagingReport(app_name, outputFile, report_id, connImagingRest)
-
-def ModulesComplexity(app_name, report_path, connImagingRest):
-    report_id = '10'
-    outputFile = '{0}/{1}_ModulesComplexity.xlsx'.format(report_path,app_name)
-    StandardImagingReport(app_name, outputFile, report_id, connImagingRest)
-    
-def GetAllImagingReportsAsync(app_name, report_path, connImagingRest):
-    reports = {
-            ('1', 'ObjectsAndDataSources'),
-            ('2', 'DBTablesAndDBObjects'),
-            ('3', 'DataSourcesAndTransactions'),
-            ('4', 'TransactionsAndObjects'),
-            ('5', 'TransactionsAndDataSources'),
-            ('6', 'TransactionComplexity'),
-            ('7', 'MostReferencedObjects'),
-            ('8', 'RelationBetweenModules'),
-            ('9', 'ModulesAndTransactions'),
-            ('10','ModulesComplexity'),
-            ('11','ModulesAndObjects')
-        }
-    for (report_id, report_name) in reports:
-        outputFile = '{0}/{1}_{2}.csv'.format(report_path,app_name,report_name)
-        print('Starting download for report: {0}'.format(report_name))
-        StandardImagingReport(app_name, outputFile, report_id, connImagingRest)
-    
 def DBObjects(app_name, report_path, connImagingRest):
     print('Starting DB Objects report generation...')
     outputFile = '{0}/{1}_DB_Objects.csv'.format(report_path,app_name)
@@ -365,3 +452,4 @@ def APIInteractions(app_name, report_path, connImagingRest):
         print('Successfully generated {0}'.format(outputFile))
     else:
         print('No results available')
+    

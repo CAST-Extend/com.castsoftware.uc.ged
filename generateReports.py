@@ -61,23 +61,17 @@ if __name__ == '__main__':
             reports.GenerateRulesByKeywordReports(c.aip_name, c.aip_triplet_prefix, edDir, connAipRest, 'hard')
             reports.GenerateRulesByKeywordReports(c.aip_name, c.aip_triplet_prefix, edDir, connAipRest, 'storing')
         
-        # Imaging Reports Generation 
+        # Imaging Reports 
         if c.IMAGING:
             connImagingRest = ImagingApi(c.imaging_rest_url, c.imaging_rest_api_key)
             imagingDir = c.report_path + '/Imaging_Reports'
-            reports.GenerateAllImagingReportsAsync(c.aip_name, connImagingRest)
             if not os.path.exists(imagingDir):
                     os.makedirs(imagingDir)
-        
-        # Project BOM
-        
-        # Summary Information
-        
-        
-        # Imaging Reports Download
-        reports.GetAllImagingReportsAsync(c.aip_name, imagingDir, connImagingRest)
-        reports.DBObjects(c.aip_name, imagingDir, connImagingRest)
-        reports.APIInteractions(c.aip_name, imagingDir, connImagingRest)
+            
+            #reports.GenerateAllImagingReportsAsync(c.aip_name, connImagingRest)
+            #reports.GetAllImagingReportsAsync(c.aip_name, imagingDir, connImagingRest)
+            reports.DBObjects(c.aip_name, imagingDir, connImagingRest)
+            reports.APIInteractions(c.aip_name, imagingDir, connImagingRest)
 
     finally:
         connNeo4j.close()

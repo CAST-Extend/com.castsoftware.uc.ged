@@ -26,11 +26,11 @@ class Config(Logger):
             # AIP must always be active
             self.__config['AIP']['active']=True
 
-            for v in ['report_path','AIP','NEO4J','CSS','IMAGING']:
+            for v in ['report_path','AIP','NEO4J','CSS','IMAGING','HIGHLIGHT']:
                 if v not in self.__config or len(self.__config[v]) == 0:
                     raise ValueError(f"Required field '{v}' is missing from config.json")
 
-            for v in ['AIP','NEO4J','CSS','IMAGING']:
+            for v in ['AIP','NEO4J','CSS','IMAGING','HIGHLIGHT']:
                 json = self.__config[v]
                 if 'active' not in json or json['active'] == True:
                     self.__config[v]['active']=True
@@ -47,6 +47,11 @@ class Config(Logger):
                                 break
                     elif v in ['IMAGING']:
                         for p in ["url","api_key"]:
+                            if p not in json or len(p) == 0:
+                                valid=False
+                                break
+                    elif v in ['HIGHLIGHT']:
+                        for p in ["application_name","domain_id","url","user","password"]:
                             if p not in json or len(p) == 0:
                                 valid=False
                                 break
@@ -83,6 +88,10 @@ class Config(Logger):
     @property
     def IMAGING(self):
         return self.__config['IMAGING']['active']
+    
+    @property
+    def HIGHLIGHT(self):
+        return self.__config['HIGHLIGHT']['active']
 
     @property
     def report_path(self):
@@ -98,15 +107,15 @@ class Config(Logger):
     
     @property
     def aip_rest_url(self):
-        return self.__config['AIP']['rest_url']
+        return self.__config['AIP']['url']
     
     @property
     def aip_rest_user(self):
-        return self.__config['AIP']['rest_user']
+        return self.__config['AIP']['user']
     
     @property
     def aip_rest_password(self):
-        return self.__config['AIP']['rest_password']
+        return self.__config['AIP']['password']
 
     @property
     def neo4j_host(self):
@@ -142,9 +151,29 @@ class Config(Logger):
     
     @property
     def imaging_rest_url(self):
-        return self.__config['IMAGING']['rest_url']
+        return self.__config['IMAGING']['url']
     
     @property
     def imaging_rest_api_key(self):
         return self.__config['IMAGING']['api_key']
+    
+    @property
+    def hl_application_name(self):
+        return self.__config['HIGHLIGHT']['application_name']
+    
+    @property
+    def hl_domain_id(self):
+        return self.__config['HIGHLIGHT']['domain_id']
+    
+    @property
+    def hl_url(self):
+        return self.__config['HIGHLIGHT']['url']
+    
+    @property
+    def hl_user(self):
+        return self.__config['HIGHLIGHT']['user']
+    
+    @property
+    def hl_password(self):
+        return self.__config['HIGHLIGHT']['password']
 

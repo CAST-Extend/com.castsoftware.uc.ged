@@ -3,7 +3,7 @@
   
   "AIP":{
     "name":"ATCS",
-    "triplet_prefix":"bamboo",
+    "triplet_prefix":"atcs",
     "url":"http://localhost:8080/rest/",
     "user":"cast",
     "password":"cast"
