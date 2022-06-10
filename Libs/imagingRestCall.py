@@ -1,8 +1,3 @@
-'''
-Created on 1 jun 2022
-
-@author: HLR
-'''
 from imagingRestAPI import ImagingRestCall
 from requests import codes
 from io import StringIO
@@ -18,10 +13,13 @@ class ImagingApi(ImagingRestCall):
         tenantName = self._tenantName
         url = '/imaging/api/domains/{0}/apps/{1}/reports?reportid={2}&filetype={3}'.format(tenantName,appName,report_id,file_type)
         (status, json) = self.post(url)
+        report_uuid = ''
         if status == codes['ok']:
             print('Report generation requested for report {0}. Code: {1}. Body: {2}'.format(report_id,status,json))
+            report_uuid = json['success']['uuid']
         else:
             print('Error requesting generation of report {0}. Code: {1}. Body: {2}'.format(report_id,status,json))
+        return report_uuid
         
     def GetReport(self, appName, report_id):
         report = ''
@@ -44,6 +42,14 @@ class ImagingApi(ImagingRestCall):
         if status == codes['ok']:
             dbObjects = json
         return dbObjects
+    
+    def ReportStatus(self):
+        statuses = ''
+        url = '/imaging/api/reports/status'
+        (status, json) = self.get(url)
+        if status == codes['ok']:
+            statuses = json
+        return(statuses)  
     
     def LevelNodes(self, appName, level):
         nodes = ''
