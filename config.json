@@ -28,5 +28,14 @@
     "active": true,
     "url" : "http://localhost:8083/",
     "api_key" : "6r3MqPPQ.9NvrJpsIJX3WcMIOtjS148pajzCDDHV9"
+  },
+  
+  "HIGHLIGHT":{
+  	"active": false,
+    "application_name" : "ATCS",
+    "domain_id" : "11111",
+    "url" : "https://rpa.casthighlight.com/WS2",
+    "user" : "name@domain.com",
+    "password" : "password"
   }
 }

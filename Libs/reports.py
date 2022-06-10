@@ -50,6 +50,9 @@ def ProjectBOM(domainId, hl_app_name, report_path, connHL, aip_name, schema_pref
                 if len(projectName)>30:
                     projectName = projectName[0:29]
                 auSheetList.update({projectName : auDf})
+                
+        #inputHL = pd.DataFrame(componentsMapping)      
+        #inputHL.to_excel(writer, sheet_name="HL Raw Data", index=False)
         
         frameworkDf = pd.DataFrame(frameworkList)
         frameworkDf.to_excel(writer, sheet_name="Project_BOM(Bill of Material)", index=False)
@@ -65,7 +68,7 @@ def ProjectBOM(domainId, hl_app_name, report_path, connHL, aip_name, schema_pref
                          
         writer.save()
         print('Successfully generated {0}'.format(outputFile))
-        
+    
 def ApplicationComponentsMapping(domainId, hl_app_name, connHL):
     applicationId = connHL.get_application_id(domainId, hl_app_name)
     return connHL.get_components_mapping(domainId, applicationId)
@@ -297,11 +300,12 @@ def NetProjectInformation(app_name, schema_prefix, report_path, connCSS):
     sheetName = 'Results'  
     GenericSQLReport(sql, sheetName, connCSS, outputFile)
 
+   
 def Repository_Technology(app_name, schema_prefix, report_path, connCSS):
     print('Starting the Repository Technology report generation...')
     sql =f'''
         TODO
-        '''
+    '''
     outputFile = '{0}/{1}_Repository_Technology.xlsx'.format(report_path,app_name) 
     sheetName = 'Results'  
     #GenericSQLReport(sql, sheetName, connCSS, outputFile)
@@ -376,13 +380,13 @@ def GenerateImagingReportsAsync(app_name, report_path, standardReportsList, conn
         standardReportsUuid.append(connImagingRest.ReportsGeneration(app_name, GetReportId(report)))
     i = 0
     while i < retriesNumber and len(standardReportsUuid) > 0:
-        time.sleep(retryTime)
         standardReportsUuid = CheckStatusAndDownloadReport(app_name, report_path, connImagingRest, standardReportsUuid)
+        if len(standardReportsUuid) > 0: time.sleep(retryTime)
         i = i + 1
 
 def CheckStatusAndDownloadReport(appName, report_path, connImagingRest, standardReportsUuid):
     reportStatus = connImagingRest.ReportStatus()
-    pendingReports = standardReportsUuid
+    pendingReports = standardReportsUuid[:]
     print(f'Pending reports: {pendingReports}')
     for report in pendingReports:
         status = reportStatus['success'][report]['Status']
@@ -452,4 +456,41 @@ def APIInteractions(app_name, report_path, connImagingRest):
         print('Successfully generated {0}'.format(outputFile))
     else:
         print('No results available')
+        
+'''     
+To be deleted
+
+def GenerateMostReferencedObjects(app_name, connImagingRest):
+    report_id = '7'
+    connImagingRest.ReportsGeneration(app_name, report_id)
     
+def GenerateModulesComplexity(app_name, connImagingRest):
+    report_id = '10'
+    connImagingRest.ReportsGeneration(app_name, report_id)
+
+def RelationsBetweenObjectsAndDataSources(app_name, report_path, connImagingRest):
+    report_id = '1'
+    outputFile = '{0}/{1}_RelationsBetweenObjectsAndDataSources.csv'.format(report_path,app_name)
+    StandardImagingReport(app_name, outputFile, report_id, connImagingRest)
+
+def MostReferencedObjects(app_name, report_path, connImagingRest):
+    report_id = '7'
+    outputFile = '{0}/{1}_MostReferencedObjects.csv'.format(report_path,app_name)
+    StandardImagingReport(app_name, outputFile, report_id, connImagingRest)
+
+def ModulesComplexity(app_name, report_path, connImagingRest):
+    report_id = '10'
+    outputFile = '{0}/{1}_ModulesComplexity.csv'.format(report_path,app_name)
+    StandardImagingReport(app_name, outputFile, report_id, connImagingRest)
+
+def GenerateAllImagingReportsAsync(app_name, connImagingRest):
+    for report_id in range(1,12):
+        connImagingRest.ReportsGeneration(app_name, report_id) 
+        
+def GetAllImagingReportsAsync(app_name, report_path, connImagingRest, retriesNumber, retryTime):
+    i = 0
+    while i < retriesNumber:
+        CheckStatusAndDownloadReport(app_name, report_path, connImagingRest)
+        time.sleep(retryTime)
+        i = i + 1
+'''
