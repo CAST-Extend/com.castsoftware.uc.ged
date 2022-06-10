@@ -2,8 +2,8 @@
   "report_path" : "C:/temp",
   
   "AIP":{
-    "name":"Bamboo",
-    "triplet_prefix":"bamboo",
+    "name":"ATCS",
+    "triplet_prefix":"atcs",
     "url":"http://localhost:8080/rest/",
     "user":"cast",
     "password":"cast"
@@ -25,8 +25,17 @@
   },
   
   "IMAGING": {
-	"active": true,
-    "url" : "http://sha-dd-imaging:8083/",
-    "api_key" : "tcxRfdPB.wJUbPYl3cul3O7WO7micQAm4AECzJUuY"
+    "active": true,
+    "url" : "http://localhost:8083/",
+    "api_key" : "6r3MqPPQ.9NvrJpsIJX3WcMIOtjS148pajzCDDHV9"
+  },
+  
+  "HIGHLIGHT":{
+  	"active": false,
+    "application_name" : "ATCS",
+    "domain_id" : "11111",
+    "url" : "https://rpa.casthighlight.com/WS2",
+    "user" : "name@domain.com",
+    "password" : "password"
   }
 }
