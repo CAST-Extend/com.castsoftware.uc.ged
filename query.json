@@ -1,0 +1,151 @@
+[
+    {
+        "report": "Complexity-Objects",
+        "tabs": [
+            {
+                "name": "CC-Summary",
+                "query": [
+                    "MATCH (o:Object:{config.aip_name})-[r]->(p:ObjectProperty)",
+                    "WHERE p.Description CONTAINS 'Cyclomatic Complexity'",
+                    "WITH o,p.Description as CCcomplexityDesc ,SUM(toInteger(r.value)) as totalCCComplexity  ",
+                    "Optional MATCH (o)-[r1]->(p1:ObjectProperty) WHERE p1.Description='File' ",
+                    "With o,CCcomplexityDesc  ,totalCCComplexity  ,r1.value as Path ",
+                    "Optional MATCH (o)-[r2]->(p2:ObjectProperty) WHERE p2.Description CONTAINS 'Essential Complexity' ",
+                    "With o,CCcomplexityDesc  ,totalCCComplexity  , Path , p2.Description as ECcomplexityDesc ,SUM(toInteger(r2.value)) as totalECComplexity ",
+                    "Optional MATCH (o)-[r3]->(p3:ObjectProperty) WHERE p3.Description CONTAINS 'Integration Complexity' ",
+                    "With o,CCcomplexityDesc  ,totalCCComplexity,ECcomplexityDesc  ,totalECComplexity  , Path , p3.Description as ICcomplexityDesc ,SUM(toInteger(r3.value)) as totalICComplexity ",
+                    "RETURN  o.Type as `Type`, o.Name as `Name`, o.FullName as `FullName`, Path as `Path` , totalCCComplexity as `Cyclomatic Complexity` , totalECComplexity as `Essential Complexity`,totalICComplexity as `Integration Complexity`"
+                ],
+                "formating": {
+                    "Type": {
+                        "width": 20
+                    },
+                    "Name": {
+                        "width": 20
+                    },
+                    "FullName": {
+                        "width": 20
+                    },
+                    "Path": {
+                        "width": 20
+                    },
+                    "Cyclomatic Complexity": {
+                        "width": 20
+                    },
+                    "Essential Complexity": {
+                        "width": 20
+                    },
+                    "Integration Complexity": {
+                        "width": 20
+                    }
+                }
+            },
+            {
+                "name": "CC - Sub objects",
+                "query": [
+                    "MATCH (o:SubObject:{config.aip_name})-[r]->(p:ObjectProperty)",
+                    "WHERE p.Description CONTAINS 'Cyclomatic Complexity'",
+                    "WITH o,p.Description as CCcomplexityDesc ,SUM(toInteger(r.value)) as totalCCComplexity  ",
+                    "Optional MATCH (o)-[r1]->(p1:ObjectProperty) WHERE p1.Description='File' ",
+                    "With o,CCcomplexityDesc  ,totalCCComplexity  ,r1.value as Path ",
+                    "Optional MATCH (o)-[r2]->(p2:ObjectProperty) WHERE p2.Description CONTAINS 'Essential Complexity' ",
+                    "With o,CCcomplexityDesc  ,totalCCComplexity  , Path , p2.Description as ECcomplexityDesc ,SUM(toInteger(r2.value)) as totalECComplexity ",
+                    "Optional MATCH (o)-[r3]->(p3:ObjectProperty) WHERE p3.Description CONTAINS 'Integration Complexity' ",
+                    "With o,CCcomplexityDesc  ,totalCCComplexity,ECcomplexityDesc  ,totalECComplexity  , Path , p3.Description as ICcomplexityDesc ,SUM(toInteger(r3.value)) as totalICComplexity ",
+                    "RETURN  o.Type as `Type`, o.Name as `Name`, o.FullName as `FullName`, Path , totalCCComplexity as `Cyclomatic Complexity` , totalECComplexity as `Essential Complexity`,totalICComplexity as `Integration Complexity`"
+                ],
+                "formating": {
+                    "Type": {
+                        "width": 20
+                    },
+                    "Name": {
+                        "width": 20
+                    },
+                    "FullName": {
+                        "width": 20
+                    },
+                    "Path": {
+                        "width": 20
+                    },
+                    "Cyclomatic Complexity": {
+                        "width": 20
+                    },
+                    "Essential Complexity": {
+                        "width": 20
+                    },
+                    "Integration Complexity": {
+                        "width": 20
+                    }
+                }
+            }
+        ]
+    },
+    {
+        "report": "DeadCode",
+        "tabs": [
+            {
+                "name": "DeadCode",
+                "query": [
+                    "MATCH (o:Object:`{config.aip_name}`) WHERE Not (o)-[]-(:Object) ",
+                    "with o ",
+                    "Optional MATCH (o)-[r1]->(p2:ObjectProperty) WHERE p2.Description='File' ",
+                    "With o,r1.value as Path ",
+                    "RETURN DISTINCT o.Type,o.Name, o.FullName,Path ",
+                    "UNION ALL",
+                    "MATCH (o:SubObject:`{config.aip_name}`) WHERE Not (o)-[]-(:SubObject) ",
+                    "with o ",
+                    "Optional MATCH (o)-[r1]->(p2:ObjectProperty) WHERE p2.Description='File' ",
+                    "With o,r1.value as Path ",
+                    "RETURN DISTINCT o.Type, o.Name, o.FullName, Path"
+                ],
+                "formating": {
+                    "o.Type": {
+                        "width": 20
+                    },
+                    "o.Name": {
+                        "width": 20
+                    },
+                    "o.FullName": {
+                        "width": 20
+                    },
+                    "Path": {
+                        "width": 20
+                    }
+                }
+            }
+        ]
+    },
+    {
+        "report": "API details",
+        "tabs": [
+            {
+                "name": "Sheet 1",
+                "query": [
+                    "MATCH (m:Module:{config.aip_name})-[:Contains]->(o1:Object)-[]-(o2:Object)<-[]-(l:Level5) ",
+                    "WHERE l.Name CONTAINS 'API' ",
+                    "RETURN DISTINCT m.Name as `Repository Name`, COLLECT(DISTINCT l.Name) as `API Name` "
+                ],
+                "formating": {
+                    "Repository Name": {
+                        "width": 20
+                    },
+                    "API Name": {
+                        "width": 20
+                    }
+                }
+            },
+            {
+                "name": "Sheet 2",
+                "query": [
+                    "MATCH (m:Module:{config.aip_name})-[:Contains]->(o1:Object)-[]-(o2:Object)<-[]-(l:Level5) ",
+                    "WHERE l.Name CONTAINS 'API' ",
+                    "RETURN DISTINCT l.Name as `API Name` "
+                ],
+                "formating": {
+                    "API Name": {
+                        "width": 20
+                    }
+                }
+            }
+        ]
+    }]
