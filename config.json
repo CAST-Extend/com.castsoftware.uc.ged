@@ -2,7 +2,7 @@
   "report_path" : "C:/temp",
   
   "AIP":{
-    "name":"ATCS",
+    "name":"Apteryx",
     "triplet_prefix":"atcs",
     "url":"http://localhost:8080/rest/",
     "user":"cast",
@@ -11,7 +11,7 @@
 
   "NEO4J": {
 	"active": true,
-    "host" : "localhost",
+    "host" : "sha-dd-imaging",
     "port" : "7687",
     "user" : "neo4j",
     "password" : "imaging"
