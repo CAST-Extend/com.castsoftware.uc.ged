@@ -122,7 +122,7 @@ if __name__ == '__main__':
             numberOfRetries = 30
             timeBetweenRetries = 10
             reports.GenerateImagingReportsAsync(c.aip_name, imagingDir, standardReportsList, connImagingRest, numberOfRetries, timeBetweenRetries)
-
+            
     finally:
         connNeo4j.close()
         connCSS.disposeEngine()

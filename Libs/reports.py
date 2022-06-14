@@ -33,6 +33,7 @@ def GenerateProjectBOM(componentsMapping, report_path, aip_name, schema_prefix, 
     associatedFrameworks = []
     #auSheetList = {}
     projectInformation = ProjectsInformation(schema_prefix, connCSS)
+    projectPaths = ''
     if not projectInformation.empty and len(componentsMapping) > 0:
         for projectName, projectPath in zip(projectInformation['Project Name'], projectInformation['Project Path']):
             #print(f'Project path: {projectPath}')
@@ -52,6 +53,8 @@ def GenerateProjectBOM(componentsMapping, report_path, aip_name, schema_prefix, 
                 projectFolder = projectFolder + '/' + referenceSplit[i] 
             #print(f'Project folder: {projectFolder}')
             projectFolder = projectFolder + '/'
+            projectPaths = projectPaths + '|' + projectPath
+            
             #projectFolder = '/' + referenceSplit[len(referenceSplit)-2] + '/'
             #auList = []
             for component in componentsMapping:
@@ -82,6 +85,7 @@ def GenerateProjectBOM(componentsMapping, report_path, aip_name, schema_prefix, 
                 if len(projectName)>30:
                     projectName = projectName[0:29]
                 auSheetList.update({projectName : auDf})'''
+
     #print(f'Used frameworks: {associatedFrameworks}')
     orphanFrameworks = []
     for component in componentsMapping:
@@ -90,11 +94,15 @@ def GenerateProjectBOM(componentsMapping, report_path, aip_name, schema_prefix, 
     #print(f'Orphan Frameworks: {orphanFrameworks}')
     uaProjectInformation = UAProjectsInformation(schema_prefix, connCSS)
     if not uaProjectInformation.empty and len(orphanFrameworks) > 0:
+        projectInformation = pd.concat([projectInformation, uaProjectInformation])
+        
+        
         for uaProjectName, uaProjectPath, uaTechnology in zip(uaProjectInformation['Project Name'], uaProjectInformation['Project Path'], uaProjectInformation['Technology']):
             #print(f'UA Project path: {uaProjectPath}')
             #referenceSplit = uaProjectPath.split("\\")
             #repositoryName = referenceSplit[len(referenceSplit)-1]
             repoNames.append("N/A")
+            '''
             for framework in orphanFrameworks:
                 frameworkPath = framework.get("Framework Path")
                 frameworkName = framework.get("Framework Name")
@@ -154,11 +162,13 @@ def GenerateProjectBOM(componentsMapping, report_path, aip_name, schema_prefix, 
                     fwListRow["Framework Path"] = frameworkPath
                     frameworkList.append(fwListRow)
                     remainingOrphanFrameworks.remove(framework)
-        projectInformation = pd.concat([projectInformation, uaProjectInformation])
+            '''
+        
     projectInformation.insert(0,'Repository Name', repoNames, True)
     
     cppRepo = CppRepo(aip_name, connNeo4j)
     cppRepoList = []
+    cppPathList = []
     if not cppRepo.empty:
         for fullname in cppRepo['Object Fullname']:
             if ".c" in fullname and "Analyzed" in fullname:
@@ -173,14 +183,16 @@ def GenerateProjectBOM(componentsMapping, report_path, aip_name, schema_prefix, 
                     if projectPath == '': projectPath = fullnameSplit[i]
                     else: projectPath = projectPath + '\\' + fullnameSplit[i]
                 projectPath = projectPath.replace('[','')
-                cppProject = {}
-                cppProject["Repository Name"] = repo
-                cppProject["Project Name"] = projectName
-                cppProject["Project Path"] = projectPath
-                cppProject["Technology"] = 'C++'
-                cppProject["Version"] = 'N/A'
-                #print(cppProject)
-                cppRepoList.append(cppProject)
+                if not projectPath in projectPaths:
+                    cppPathList.append(projectPath)
+                    cppProject = {}
+                    cppProject["Repository Name"] = repo
+                    cppProject["Project Name"] = projectName
+                    cppProject["Project Path"] = projectPath
+                    cppProject["Technology"] = 'C++'
+                    cppProject["Version"] = 'N/A'
+                    #print(cppProject)
+                    cppRepoList.append(cppProject)
     
     #print(cppRepoList)
     if len(cppRepoList) > 0: 
@@ -213,19 +225,32 @@ def ProjectsInformation(schema_prefix, connCSS):
         from {schema_prefix}_mngt.cms_net_project
         union
         select 
-            object_name as "Project Name", rootpath as "Project Path", 'Java' as "Technology", java_version as "Version"
+            object_name as "Project Name", rootpath as "Project Path", 'Java' as "Technology", coalesce(java_version, 'Unknown') as "Version"
         from {schema_prefix}_mngt.cms_j2ee_project
         union
         select 
-            object_name as "Project Name", rootpath as "Project Path", 'C++' as "Technology", devenv_usage as "Version"
+            object_name as "Project Name", rootpath as "Project Path", 'C++' as "Technology", 
+            case devenv_usage
+                when 'DevEnvVC2003Console' then 'VC++ 2003 Console'
+                when 'DevEnvVC2003Mfc' then 'VC++ 2003 Win32/Mfc'                
+                when 'DevEnvVC2005Console' then 'VC++ 2005 Console'
+                when 'DevEnvVC2005Mfc' then 'VC++ 2005 Win32/Mfc'
+                when 'DevEnvVC2008Console' then 'VC++ 2008 Console'
+                when 'DevEnvVC2008Mfc' then 'VC++ 2008 Win32/Mfc'
+                when 'DevEnvVC2010Console' then 'VC++ 2010 Console'
+                when 'DevEnvVC2010Mfc' then 'VC++ 2010 Win32/Mfc'
+                when 'DevEnvVC2012Console' then 'VC++ 2012 Console'
+                when 'DevEnvVC2012Mfc' then 'VC++ 2012 Win32/Mfc'
+            else 'Unknown'
+            end as "Version"
         from {schema_prefix}_mngt.cms_cpp_project
         union
         select 
-            object_name as "Project Name", rootpath as "Project Path", 'ASP' as "Technology", 'N/A' as "Version"
+            object_name as "Project Name", rootpath as "Project Path", 'ASP' as "Technology", 'Unknown' as "Version"
         from {schema_prefix}_mngt.cms_asp_project
         union
         select 
-            object_name as "Project Name", rootpath as "Project Path", 'VB' as "Technology", 'N/A' as "Version"
+            object_name as "Project Name", rootpath as "Project Path", 'VB' as "Technology", 'Unknown' as "Version"
         from {schema_prefix}_mngt.cms_vb_project
         order by "Project Name"
     """
@@ -234,7 +259,7 @@ def ProjectsInformation(schema_prefix, connCSS):
 def UAProjectsInformation(schema_prefix, connCSS):
     sql = f"""
         select 
-            object_name as "Project Name", rootpath as "Project Path", languagesstr as "Technology", 'N/A' as "Version"
+            object_name as "Project Name", rootpath as "Project Path", languagesstr as "Technology", 'Unknown' as "Version"
         from {schema_prefix}_mngt.cms_ua_project
         order by "Project Name"
     """
