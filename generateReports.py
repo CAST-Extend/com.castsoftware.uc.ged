@@ -8,6 +8,8 @@ from aipCSS import CssConnection
 from aipRest import AipRestCall
 from imagingRestCall import ImagingApi
 from hlRest import HighlightRestCall
+from cypher import Cypher
+from logging import INFO
 
 if __name__ == '__main__':
     
@@ -18,15 +20,25 @@ if __name__ == '__main__':
     parser.add_argument('-c','--config', required=True, help='Configuration properties file')
     args = parser.parse_args()
     c = Config(args.config)
-
+    
+    connNeo4j = None
+    connCSS = None
+    connHL = None
+    connAipRest = None
+    connImagingRest = None
+    
     try:
         # Cypher reports
         if c.NEO4J:
+            cypher = Cypher(c, log_level=INFO)
+            cypher.run()
+            cypher.updateQueryFile()
+            '''
+            @deprecated:
             connNeo4j = Neo4jConnection(c.neo4j_host, c.neo4j_port, c.neo4j_user, c.neo4j_password)
             cypherDir = c.report_path + '/Cypher'
             if not os.path.exists(cypherDir):
                 os.makedirs(cypherDir)
-            
             reports.ApiRepository(c.aip_name, cypherDir, connNeo4j)
             reports.ApiName(c.aip_name, cypherDir, connNeo4j)
             reports.CloudReady(c.aip_name, cypherDir, connNeo4j)
@@ -37,7 +49,8 @@ if __name__ == '__main__':
             reports.MainCallingShellProgram(c.aip_name, cypherDir, connNeo4j)
             reports.ObjectLOC(c.aip_name, cypherDir, connNeo4j)
             reports.ShellProgram(c.aip_name, cypherDir, connNeo4j)
-       
+            '''
+
         # Postgres reports
         if c.CSS:
             connCSS = CssConnection(c.css_host, c.css_port, c.css_user, c.css_password)
@@ -51,15 +64,24 @@ if __name__ == '__main__':
             reports.JavaProjectInformation(c.aip_name, c.aip_triplet_prefix, postgresDir, connCSS)
             reports.Repository_Technology(c.aip_name, c.aip_triplet_prefix, postgresDir, connCSS)
             reports.Technology_LOC(c.aip_name, c.aip_triplet_prefix, postgresDir, connCSS)
-           
-        # Project BOM report
-        if c.NEO4J and c.CSS and c.HIGHLIGHT:
-            connHL = HighlightRestCall(c.hl_url, c.hl_user, c.hl_password)
+            
+        # Project BOM and Summary Information reports
+        if c.NEO4J and c.CSS:
             projectBomDir = c.report_path + '/Project_BOM'
+            summaryInfoDir = c.report_path + '/Summary_Information'
+            
+            connNeo4j = Neo4jConnection(c.neo4j_host, c.neo4j_port, c.neo4j_user, c.neo4j_password)
+            
             if not os.path.exists(projectBomDir):
                 os.makedirs(projectBomDir)
+            if not os.path.exists(summaryInfoDir):
+                os.makedirs(summaryInfoDir)
             
-            reports.ProjectBOM(c.hl_domain_id, c.hl_application_name, projectBomDir, connHL, c.aip_name, c.aip_triplet_prefix, connCSS)
+            if c.HIGHLIGHT:
+                connHL = HighlightRestCall(c.hl_url, c.hl_user, c.hl_password)
+                reports.ProjectBOMfromHighLight(c.hl_domain_id, c.hl_application_name, projectBomDir, connHL, c.aip_name, c.aip_triplet_prefix, connCSS, connNeo4j)
+            elif c.LOCAL_BOM_REPORT:             
+                reports.ProjectBOMfromLocalFile(c.bom_path, projectBomDir, c.aip_name, c.aip_triplet_prefix, connCSS, connNeo4j)
         
         # Engineering Dashboard reports
         if c.AIP:
@@ -77,7 +99,6 @@ if __name__ == '__main__':
             imagingDir = c.report_path + '/Imaging_Reports'
             if not os.path.exists(imagingDir):
                     os.makedirs(imagingDir)
-            
             reports.DBObjects(c.aip_name, imagingDir, connImagingRest)
             reports.APIInteractions(c.aip_name, imagingDir, connImagingRest)
             '''
@@ -98,8 +119,8 @@ if __name__ == '__main__':
                 'Most Referenced Objects',
                 "Modules' Complexity",
             ]
-            numberOfRetries = 10
-            timeBetweenRetries = 5 
+            numberOfRetries = 30
+            timeBetweenRetries = 10
             reports.GenerateImagingReportsAsync(c.aip_name, imagingDir, standardReportsList, connImagingRest, numberOfRetries, timeBetweenRetries)
 
     finally:
