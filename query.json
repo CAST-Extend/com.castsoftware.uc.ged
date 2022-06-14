@@ -1,9 +1,11 @@
 [
     {
-        "report": "Complexity-Objects",
+        "report": "{config.aip_name}_Complex_Objects",
+        "ouputFolder" : "Cypher",
         "tabs": [
             {
-                "name": "CC-Summary",
+            	"queryType" : "cypher",
+                "name": "CC - Objects",
                 "query": [
                     "MATCH (o:Object:{config.aip_name})-[r]->(p:ObjectProperty)",
                     "WHERE p.Description CONTAINS 'Cyclomatic Complexity'",
@@ -81,7 +83,7 @@
         ]
     },
     {
-        "report": "DeadCode",
+        "report": "{config.aip_name}_Dead_Code",
         "tabs": [
             {
                 "name": "DeadCode",
@@ -116,10 +118,10 @@
         ]
     },
     {
-        "report": "API details",
+        "report": "{config.aip_name}_API",
         "tabs": [
             {
-                "name": "Sheet 1",
+                "name": "API",
                 "query": [
                     "MATCH (m:Module:{config.aip_name})-[:Contains]->(o1:Object)-[]-(o2:Object)<-[]-(l:Level5) ",
                     "WHERE l.Name CONTAINS 'API' ",
@@ -133,9 +135,14 @@
                         "width": 20
                     }
                 }
-            },
+            }
+        ]
+    },
+    {
+        "report": "{config.aip_name}_API_Name",
+        "tabs": [
             {
-                "name": "Sheet 2",
+                "name": "API Name",
                 "query": [
                     "MATCH (m:Module:{config.aip_name})-[:Contains]->(o1:Object)-[]-(o2:Object)<-[]-(l:Level5) ",
                     "WHERE l.Name CONTAINS 'API' ",
@@ -148,4 +155,338 @@
                 }
             }
         ]
-    }]
+    },
+    {
+        "report": "{config.aip_name}_ShellProgram",
+        "tabs": [
+            {
+                "name": "ShellProgram",
+                "query": [
+                    "MATCH (o:Object: {config.aip_name})",
+                    "WHERE o.Type = 'SHELL Program'",
+                    "RETURN distinct o.Name as `ObjectName`,o.FullName as `ObjectFullName`,o.Type,SPLIT(o.FullName,'\\\\')[5] as `RepositoryName`"
+                ],
+                "formating": {
+                    "ObjectName": {
+                        "width": 20
+                    },
+                    "ObjectFullName": {
+                        "width": 20
+                    },
+                    "RepositoryName": {
+                        "width": 20
+                    },
+                    "o.Type": {
+                        "width": 20
+                    }
+                }
+            }
+        ]
+    },
+    {
+        "report": "{config.aip_name}_MainCallingShellProgram",
+        "tabs": [
+            {
+                "name": "MainCallingShellProgram",
+                "query": [
+                    "MATCH (caller:Object:{config.aip_name})-[:CALL]->(callee:Object:ATCS)",
+					"WHERE caller.Type='SHELL Program' ",
+					"AND NOT (()-[:CALL]->(caller)) ",
+					"RETURN caller.Name,caller.FullName,caller.Type,SPLIT(caller.FullName,'\\\\')[5] as CallerRepositoryName ,callee.Name,callee.FullName,callee.Type,SPLIT(callee.FullName,'\\\\')[5] as CalleeRepositoryName "
+                ],
+                "formating": {
+                    "caller.Name": {
+                        "width": 20
+                    },
+                    "caller.FullName": {
+                        "width": 20
+                    },
+                    "caller.Type": {
+                        "width": 20
+                    },
+                    "CallerRepositoryName": {
+                        "width": 20
+                    },
+                    "callee.Name": {
+                        "width": 20
+                    },
+                    "callee.FullName": {
+                        "width": 20
+                    },
+                    "callee.Type": {
+                        "width": 20
+                    },
+                    "CalleeRepositoryName": {
+                        "width": 20
+                    }
+                }
+            }
+        ]
+    },
+    {
+        "report": "{config.aip_name}_C++Repo",
+        "tabs": [
+            {
+                "name": "C++ Repo",
+                "query": [
+                    "MATCH (o:Object:{config.aip_name}) ",
+					"WHERE o.Type='C/C++ File' ",
+					"Optional MATCH (o)-[r1]->(p2:ObjectProperty) WHERE p2.Description='File' ",
+					"with o,r1.value as Path  ",
+					"return distinct o.Name,o.FullName,o.Type,SPLIT(Path,'\\\\')[5] as RepositoryName"
+                ],
+                "formating": {
+                    "o.Name": {
+                        "width": 20
+                    },
+                    "o.FullName": {
+                        "width": 20
+                    },
+                    "o.Type": {
+                        "width": 20
+                    },
+                    "RepositoryName": {
+                        "width": 20
+                    }
+                }
+            }
+        ]
+    },
+    {
+        "report": "{config.aip_name}_CloudReady",
+        "tabs": [
+            {
+                "name": "Cloud Ready",
+                "query": [
+                    "MATCH (h:HighlightProperty)",
+					"MATCH(o:{config.aip_name})-[r:Property]->(op:ObjectProperty)",
+					"WHERE op.Id STARTS WITH h.AipId",
+					"AND op.Id ENDS WITH 'CloudReady' ",
+					"with o,r.value AS Value,op.Description AS Description,op.Doc as Doc_link,op.Tags as Tags ",
+					"Optional MATCH (o)-[r1]->(p2:ObjectProperty) WHERE p2.Description='File' ",
+					"with o,r1.value as Path  ,Value,Description,Doc_link, Tags",
+					"RETURN o.FullName AS ObjectFullname,o.Type as ObjectType,  Value as CodeLine, Description, Doc_link, Tags,SPLIT(Path,'\\\\')[5] as RepositoryName ,    Path  "
+                ],
+                "formating": {
+                    "ObjectFullname": {
+                        "width": 20
+                    },
+                    "ObjectType": {
+                        "width": 20
+                    },
+                    "CodeLine": {
+                        "width": 20
+                    },
+                    "Description": {
+                        "width": 20
+                    },
+                    "Doc_link": {
+                        "width": 20
+                    },
+                    "Tags": {
+                        "width": 20
+                    },
+                    "RepositoryName": {
+                        "width": 20
+                    },
+                    "Path": {
+                        "width": 20
+                    }
+                }
+            }
+        ]
+    },
+    {
+        "report": "{config.aip_name}_Containerization",
+        "tabs": [
+            {
+                "name": "Containerization",
+                "query": [
+                    "MATCH (h:HighlightProperty)",
+					"MATCH(o:{config.aip_name})-[r:Property]->(op:ObjectProperty)",
+					"WHERE op.Id STARTS WITH h.AipId",
+					"AND op.Id ENDS WITH 'Container' ",
+					"with o,r.value AS Value,op.Description AS Description,op.Doc as Doc_link,op.Tags as Tags ",
+					"Optional MATCH (o)-[r1]->(p2:ObjectProperty) WHERE p2.Description='File' ",
+					"with o,r1.value as Path  ,Value,Description,Doc_link, Tags",
+					"RETURN o.FullName AS ObjectFullname,o.Type as ObjectType,  Value as CodeLine, Description, Doc_link, Tags,SPLIT(Path,'\\\\')[5] as RepositoryName, Path"          
+				],
+                "formating": {
+                    "ObjectFullname": {
+                        "width": 20
+                    },
+                    "ObjectType": {
+                        "width": 20
+                    },
+                    "CodeLine": {
+                        "width": 20
+                    },
+                    "Description": {
+                        "width": 20
+                    },
+                    "Doc_link": {
+                        "width": 20
+                    },
+                    "Tags": {
+                        "width": 20
+                    },
+                    "RepositoryName": {
+                        "width": 20
+                    },
+                    "Path": {
+                        "width": 20
+                    }
+                }
+            }
+        ]
+    },
+    {
+        "report": "{config.aip_name}_Object_LOC",
+        "tabs": [
+            {
+                "name": "Object_LOC",
+                "query": [
+                    "MATCH (o:Object:{config.aip_name})-[r]->(p:ObjectProperty) WHERE p.Description CONTAINS 'Number of code lines'",
+					"WITH o,r.value as `Numberofcodelines` ",
+					"Optional MATCH (o)-[r1]->(p2:ObjectProperty) WHERE p2.Description='File' ",
+					"With o, Numberofcodelines,r1.value as Path  ",
+					"RETURN DISTINCT o.Type as `Object Type`, o.FullName as `Object Fullname`, o.Name as `Object Name`,Numberofcodelines,SPLIT(Path,'\\\\')[5] as RepositoryName ,Path;"
+                ],
+                "formating": {
+                    "Object Type": {
+                        "width": 20
+                    },
+                    "Object Fullname": {
+                        "width": 20
+                    },
+                    "Object Name": {
+                        "width": 20
+                    },
+                    "Numberofcodelines": {
+                        "width": 20
+                    },
+                    "RepositoryName": {
+                        "width": 20
+                    },
+                    "Path": {
+                        "width": 20
+                    }
+                }
+            }
+        ]
+    },
+    {
+        "report": "{config.aip_name}_ObjectCount",
+        "tabs": [
+            {
+                "name": "ObjectCount",
+                "query": [
+                    "MATCH (o:Object:{config.aip_name})",
+					"RETURN DISTINCT o.Type as `Type`,COUNT(DISTINCT o.AipId) as `Total`",  
+					"ORDER BY COUNT(DISTINCT o.AipId) DESC"
+                ],
+                "formating": {
+                    "Type": {
+                        "width": 20
+                    },
+                    "Total": {
+                        "width": 20
+                    }
+                }
+            }
+        ]
+    },
+    {
+        "report": "{config.aip_name}_Object_LOC_Summary",
+        "tabs": [
+            {
+                "name": "Object_LOC_Summary",
+                "query": [
+                    "MATCH (o:Object:{config.aip_name})",
+					"WITH  o ",
+					"OPTIONAL MATCH (o)-[r]->(obp:ObjectProperty) WHERE obp.Description='SNumber of code lines'",
+					"RETURN DISTINCT o.Type as `Type`, COUNT(DISTINCT o.AipId) as `count_obj`, SUM(toInteger(r.value)) as tot_loc"
+                ],
+                "formating": {
+                    "Type": {
+                        "width": 20
+                    },
+                    "count_obj": {
+                        "width": 20
+                    },
+                    "tot_loc": {
+                        "width": 20
+                    }
+                }
+            }
+        ]
+    },
+    {
+        "report": "{config.aip_name}_DB_HasReferences",
+        "tabs": [
+            {
+                "name": "SQL Tables",
+                "query": [
+					"MATCH (caller:Object:{config.aip_name})-[r1]->(callee:Object:{config.aip_name})",
+					"WHERE callee.Type contains 'Table'",
+					"and not(caller.Type contains 'Procedure') and not(caller.Type contains 'function') and not(caller.Type contains 'trigger')",
+					"and not(caller.Type contains 'Table') and not(caller.Type contains 'View') and not(caller.Type contains 'Script')",
+					"return DISTINCT callee.FullName "
+                ],
+                "formating": {
+                    "callee.FullName": {
+                        "width": 40
+                    }
+                }
+            },
+            {
+                "name": "SQL Stored Procedures",
+                "query": [
+					"MATCH (caller:Object:{config.aip_name})-[r1]->(callee:Object:{config.aip_name})",
+					"WHERE callee.Type contains 'Procedure'",
+					"and not(caller.Type contains 'Procedure') and not(caller.Type contains 'function') and not(caller.Type contains 'trigger')",
+					"and not(caller.Type contains 'Table') and not(caller.Type contains 'View') and not(caller.Type contains 'Script')",
+					"return DISTINCT callee.FullName "
+                ],
+                "formating": {
+                    "callee.FullName": {
+                        "width": 40
+                    }
+                }
+            },
+            {
+                "name": "SQL Views",
+                "query": [
+					"MATCH (caller:Object:{config.aip_name})-[r1]->(callee:Object:{config.aip_name})",
+					"WHERE callee.Type contains 'View'",
+					"and not(caller.Type contains 'Procedure') and not(caller.Type contains 'function') and not(caller.Type contains 'trigger')",
+					"and not(caller.Type contains 'Table') and not(caller.Type contains 'View') and not(caller.Type contains 'Script')",
+					"return DISTINCT callee.FullName "
+                ],
+                "formating": {
+                    "callee.FullName": {
+                        "width": 40
+                    }
+                }
+            }
+        ]
+    },
+    {
+        "report": "{config.aip_name}_DB_NoCallers",
+        "tabs": [
+            {
+                "name": "DB_NoCallers",
+                "query": [
+                    "MATCH (o:Object:{config.aip_name})",
+					"WHERE o.Type contains 'Procedure' AND NOT (:Object)-[]->(o)",
+					"return DISTINCT o.FullName"
+                ],
+                "formating": {
+                    "o.FullName": {
+                        "width": 40
+                    }
+                }
+            }
+        ]
+    }
+]
