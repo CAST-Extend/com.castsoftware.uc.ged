@@ -1,3 +1,5 @@
+from logging import WARN,INFO,DEBUG
+from logger import Logger
 import pandas as pd
 import time
 
@@ -5,8 +7,10 @@ import time
     Generate Project BOM Report
 '''
 
+log = Logger(level=INFO)
+
 def ProjectBOMfromLocalFile(bom_path, report_path, aip_name, schema_prefix, connCSS, connNeo4j):
-    print('Starting the Project BOM report generation...')
+    log.info('Starting the Project BOM report generation...')
     componentsMapping = []
     logsDf = pd.read_excel(io= bom_path, header = 5, sheet_name ='Logs', usecols = "B:D")
     for name,version,localPath in zip(logsDf["Name"],logsDf["Version"],logsDf["Local Path"]):
@@ -36,7 +40,7 @@ def GenerateProjectBOM(componentsMapping, report_path, aip_name, schema_prefix, 
     projectPaths = ''
     if not projectInformation.empty and len(componentsMapping) > 0:
         for projectName, projectPath in zip(projectInformation['Project Name'], projectInformation['Project Path']):
-            #print(f'Project path: {projectPath}')
+            #log.info(f'Project path: {projectPath}')
             referenceSplit = projectPath.split("\\")
             repoIndex = referenceSplit.index("Analyzed")+1
             repositoryName = referenceSplit[repoIndex]
@@ -47,11 +51,11 @@ def GenerateProjectBOM(componentsMapping, report_path, aip_name, schema_prefix, 
                 lastFolderIndex = len(referenceSplit)-1
             else:
                 lastFolderIndex = len(referenceSplit)
-            #print(referenceSplit)
-            #print(f"Last Folder: {referenceSplit[lastFolderIndex-1]} - {repoIndex} - {lastFolderIndex}")
+            #log.info(referenceSplit)
+            #log.info(f"Last Folder: {referenceSplit[lastFolderIndex-1]} - {repoIndex} - {lastFolderIndex}")
             for i in range(repoIndex, lastFolderIndex):
                 projectFolder = projectFolder + '/' + referenceSplit[i] 
-            #print(f'Project folder: {projectFolder}')
+            #log.info(f'Project folder: {projectFolder}')
             projectFolder = projectFolder + '/'
             projectPaths = projectPaths + '|' + projectPath
             
@@ -60,7 +64,7 @@ def GenerateProjectBOM(componentsMapping, report_path, aip_name, schema_prefix, 
             for component in componentsMapping:
                 frameworkPath = component.get("Framework Path").replace("\\","/")
                 if projectFolder in frameworkPath:
-                    #print(f'Framework Path: {frameworkPath}')
+                    #log.info(f'Framework Path: {frameworkPath}')
                     frameworkName = component.get("Framework Name")
                     frameworkVersion = component.get("Framework Version")
                     '''
@@ -86,19 +90,19 @@ def GenerateProjectBOM(componentsMapping, report_path, aip_name, schema_prefix, 
                     projectName = projectName[0:29]
                 auSheetList.update({projectName : auDf})'''
 
-    #print(f'Used frameworks: {associatedFrameworks}')
+    #log.info(f'Used frameworks: {associatedFrameworks}')
     orphanFrameworks = []
     for component in componentsMapping:
         if component.get("Framework Name") not in associatedFrameworks: orphanFrameworks.append(component) #.get("Framework Path"))
     remainingOrphanFrameworks = orphanFrameworks[:]
-    #print(f'Orphan Frameworks: {orphanFrameworks}')
+    #log.info(f'Orphan Frameworks: {orphanFrameworks}')
     uaProjectInformation = UAProjectsInformation(schema_prefix, connCSS)
     if not uaProjectInformation.empty and len(orphanFrameworks) > 0:
         projectInformation = pd.concat([projectInformation, uaProjectInformation])
         
         
         for uaProjectName, uaProjectPath, uaTechnology in zip(uaProjectInformation['Project Name'], uaProjectInformation['Project Path'], uaProjectInformation['Technology']):
-            #print(f'UA Project path: {uaProjectPath}')
+            #log.info(f'UA Project path: {uaProjectPath}')
             #referenceSplit = uaProjectPath.split("\\")
             #repositoryName = referenceSplit[len(referenceSplit)-1]
             repoNames.append("N/A")
@@ -108,7 +112,7 @@ def GenerateProjectBOM(componentsMapping, report_path, aip_name, schema_prefix, 
                 frameworkName = framework.get("Framework Name")
                 frameworkVersion = framework.get("Framework Version")
                 if uaTechnology == 'HTML5' and ('.js' in frameworkPath.lower() or '.html' in frameworkPath.lower() or '.ts' in frameworkPath.lower()):
-                    #print(f'{uaTechnology} - {framework}')
+                    #log.info(f'{uaTechnology} - {framework}')
                     fwListRow = {}
                     fwListRow["Repository Name"] = "N/A"
                     fwListRow["Project Name"] = uaProjectName
@@ -119,7 +123,7 @@ def GenerateProjectBOM(componentsMapping, report_path, aip_name, schema_prefix, 
                     frameworkList.append(fwListRow)
                     remainingOrphanFrameworks.remove(framework)
                 elif uaTechnology == 'Python' and '.py' in frameworkPath.lower():
-                    #print(f'{uaTechnology} - {framework}')
+                    #log.info(f'{uaTechnology} - {framework}')
                     fwListRow = {}
                     fwListRow["Repository Name"] = repositoryName
                     fwListRow["Project Name"] = uaProjectName
@@ -130,7 +134,7 @@ def GenerateProjectBOM(componentsMapping, report_path, aip_name, schema_prefix, 
                     frameworkList.append(fwListRow)
                     remainingOrphanFrameworks.remove(framework)
                 elif uaTechnology == 'SHELL' and ('.sh' in frameworkPath.lower() or '.ksh' in frameworkPath.lower()): 
-                    #print(f'{uaTechnology} - {framework}')
+                    #log.info(f'{uaTechnology} - {framework}')
                     fwListRow = {}
                     fwListRow["Repository Name"] = repositoryName
                     fwListRow["Project Name"] = uaProjectName
@@ -141,7 +145,7 @@ def GenerateProjectBOM(componentsMapping, report_path, aip_name, schema_prefix, 
                     frameworkList.append(fwListRow)
                     remainingOrphanFrameworks.remove(framework)
                 elif uaTechnology == 'PHP' and '.php' in frameworkPath.lower():
-                    #print(f'{uaTechnology} - {framework}')
+                    #log.info(f'{uaTechnology} - {framework}')
                     fwListRow = {}
                     fwListRow["Repository Name"] = repositoryName
                     fwListRow["Project Name"] = uaProjectName
@@ -152,7 +156,7 @@ def GenerateProjectBOM(componentsMapping, report_path, aip_name, schema_prefix, 
                     frameworkList.append(fwListRow)
                     remainingOrphanFrameworks.remove(framework)
                 elif uaTechnology == 'Perl' and '.pl' in frameworkPath.lower():
-                    #print(f'{uaTechnology} - {framework}')
+                    #log.info(f'{uaTechnology} - {framework}')
                     fwListRow = {}
                     fwListRow["Repository Name"] = repositoryName
                     fwListRow["Project Name"] = uaProjectName
@@ -191,10 +195,10 @@ def GenerateProjectBOM(componentsMapping, report_path, aip_name, schema_prefix, 
                     cppProject["Project Path"] = projectPath
                     cppProject["Technology"] = 'C++'
                     cppProject["Version"] = 'N/A'
-                    #print(cppProject)
+                    #log.info(cppProject)
                     cppRepoList.append(cppProject)
     
-    #print(cppRepoList)
+    #log.info(cppRepoList)
     if len(cppRepoList) > 0: 
         cppRepoDf = pd.DataFrame(cppRepoList).drop_duplicates()
         projectInformation = pd.concat([projectInformation, cppRepoDf]) 
@@ -212,7 +216,7 @@ def GenerateProjectBOM(componentsMapping, report_path, aip_name, schema_prefix, 
         auSheetList[auSheet].to_excel(writer, sheet_name=sheetName, index=False)
     '''                     
     writer.save()
-    print('Successfully generated {0}'.format(outputFile))
+    log.info('Successfully generated {0}'.format(outputFile))
         
 def ApplicationComponentsMapping(domainId, hl_app_name, connHL):
     applicationId = connHL.get_application_id(domainId, hl_app_name)
@@ -281,12 +285,12 @@ def GenericSQLReport(query, sheetName, connCSS, outputFile):
     if not dtf_results.empty:
         with pd.ExcelWriter(outputFile) as writer:
             dtf_results.to_excel(writer, sheet_name=f'{sheetName}', index=False)
-        print('Successfully generated {0}'.format(outputFile))
+        log.info('Successfully generated {0}'.format(outputFile))
     else: 
-        print('No results available')
+        log.info('No results available')
     
 def ASPProjectInformation(app_name, schema_prefix, report_path, connCSS):
-    print('Starting the ASPProjectInformation report generation...')
+    log.info('Starting the ASPProjectInformation report generation...')
     sql =f'''
         select object_name as "Project Name", rootpath as "Project Reference" from {schema_prefix}_mngt.cms_asp_project
         '''
@@ -295,7 +299,7 @@ def ASPProjectInformation(app_name, schema_prefix, report_path, connCSS):
     GenericSQLReport(sql, sheetName, connCSS, outputFile)
     
 def AssemblyInformation(app_name, schema_prefix, report_path, connCSS):
-    print('Starting the AssemblyInformation report generation...')
+    log.info('Starting the AssemblyInformation report generation...')
     sql =f'''
         select assemblypath as "Assembly Name" from {schema_prefix}_mngt.cms_net_assembly_file
         '''
@@ -304,7 +308,7 @@ def AssemblyInformation(app_name, schema_prefix, report_path, connCSS):
     GenericSQLReport(sql, sheetName, connCSS, outputFile)
     
 def CppProjectInformation(app_name, schema_prefix, report_path, connCSS):
-    print('Starting the CppProjectInformation report generation...')
+    log.info('Starting the CppProjectInformation report generation...')
     sql =f'''
         select object_name as "Project Name", rootpath as "Project Reference" from {schema_prefix}_mngt.cms_cpp_project
         '''
@@ -313,7 +317,7 @@ def CppProjectInformation(app_name, schema_prefix, report_path, connCSS):
     GenericSQLReport(sql, sheetName, connCSS, outputFile)
     
 def JavaProjectInformation(app_name, schema_prefix, report_path, connCSS):
-    print('Starting the JavaProjectInformation report generation...')
+    log.info('Starting the JavaProjectInformation report generation...')
     sql = """
         select object_name as "Project Name", rootpath as "Project Reference", codesize as "Code Size",
             apppath as "Application Path", web_descriptor as "Web Descriptor", java_version as "Java Version",
@@ -325,7 +329,7 @@ def JavaProjectInformation(app_name, schema_prefix, report_path, connCSS):
     GenericSQLReport(sql, sheetName, connCSS, outputFile)
     
 def NetProjectInformation(app_name, schema_prefix, report_path, connCSS):
-    print('Starting the NetProjectInformation report generation...')
+    log.info('Starting the NetProjectInformation report generation...')
     sql =f'''
         select 
             object_name as "Project Name", rootpath as "Project Reference", codesize as "Code Size",
@@ -338,7 +342,7 @@ def NetProjectInformation(app_name, schema_prefix, report_path, connCSS):
 
    
 def Repository_Technology(app_name, schema_prefix, report_path, connCSS):
-    print('Starting the Repository Technology report generation...')
+    log.info('Starting the Repository Technology report generation...')
     """
     sql =f'''
         TODO
@@ -349,7 +353,7 @@ def Repository_Technology(app_name, schema_prefix, report_path, connCSS):
     """
    
 def Technology_LOC(app_name, schema_prefix, report_path, connCSS):
-    print('Starting the Technology LOC report generation...')
+    log.info('Starting the Technology LOC report generation...')
     sql = """
         Select Languages as "Technology Name", SUM(LOC) as "LOC" 
         from ((select t3.object_language_name Languages, SUM(t4.InfVal) LOC 
@@ -381,21 +385,21 @@ def GenericRuleResultsReport(rule_id, schema_prefix, connAipRest, outputFile):
     if not dtf_results.empty:
         with pd.ExcelWriter(outputFile) as writer:
             dtf_results.to_excel(writer, sheet_name="Violations", index=False)
-        print('Successfully generated {0}'.format(outputFile))
+        log.info('Successfully generated {0}'.format(outputFile))
     else:
-        print('No results available')
+        log.info('No results available')
         
 def GenerateActionPlanRulesReports(app_name, schema_prefix, report_path, connAipRest):
     rules = connAipRest.get_action_plan_rules(schema_prefix)
     for (rule_id, rule_name) in rules:
-        print('Starting report generation for rule: {0}'.format(rule_name))
+        log.info('Starting report generation for rule: {0}'.format(rule_name))
         filename = CleanNameForReport(rule_name)
         GenericRuleResultsReport(rule_id, schema_prefix, connAipRest, '{0}/{1}_{2}.xlsx'.format(report_path,app_name,filename))
 
 def GenerateRulesByKeywordReports(app_name, schema_prefix, report_path, connAipRest, keyword):
     rules = connAipRest.get_rules_by_keyword(schema_prefix, keyword)
     for (rule_id, rule_name) in rules:
-        print('Starting report generation for rule: {0}'.format(rule_name))
+        log.info('Starting report generation for rule: {0}'.format(rule_name))
         filename = CleanNameForReport(rule_name)
         GenericRuleResultsReport(rule_id, schema_prefix, connAipRest, '{0}/{1}_{2}.xlsx'.format(report_path,app_name,filename))
 
@@ -425,15 +429,15 @@ def GenerateImagingReportsAsync(app_name, report_path, standardReportsList, conn
 def CheckStatusAndDownloadReport(appName, report_path, connImagingRest, standardReportsUuid):
     reportStatus = connImagingRest.ReportStatus()
     pendingReports = standardReportsUuid[:]
-    print(f'Pending reports: {pendingReports}')
+    log.debug(f'Pending reports: {pendingReports}')
     for report in pendingReports:
         status = reportStatus['success'][report]['Status']
         reportName = reportStatus['success'][report]['ReportName']
-        print(f'Report {report} Status {status} Name {reportName}')
+        log.debug(f'Report {report} Status {status} Name {reportName}')
         if status == 'Done':
             report_id = GetReportId(reportName)
             outputFile = f'{report_path}/{appName}_{CleanNameForReport(reportName)}.csv'
-            print(f'Generating Report ID {report_id} - {outputFile})')
+            log.info(f'Generating Report ID {report_id} - {outputFile}')
             StandardImagingReport(appName, outputFile, report_id, connImagingRest)
             standardReportsUuid.remove(report)
     return standardReportsUuid
@@ -458,12 +462,12 @@ def StandardImagingReport(app_name, outputFile, report_id, connImagingRest):
     dtf_results = connImagingRest.GetReport(app_name, report_id)
     if not dtf_results.empty:
         dtf_results.to_csv(outputFile, index = False)
-        print('Successfully generated {0}'.format(outputFile))
+        log.info('Successfully generated {0}'.format(outputFile))
     else:
-        print('No results available')
+        log.info('No results available')
 
 def DBObjects(app_name, report_path, connImagingRest):
-    print('Starting DB Objects report generation...')
+    log.info('Starting DB Objects report generation...')
     outputFile = '{0}/{1}_DB_Objects.csv'.format(report_path,app_name)
     dbObjects = connImagingRest.GetDBObjects(app_name)
     if len(dbObjects) > 0:
@@ -478,22 +482,22 @@ def DBObjects(app_name, report_path, connImagingRest):
         dtf_results = connImagingRest.ExportView(app_name, jsonData)
         if not dtf_results.empty:
             dtf_results.to_csv(outputFile, index = False)
-            print('Successfully generated {0}'.format(outputFile))
+            log.info('Successfully generated {0}'.format(outputFile))
         else:
-            print('No results available')
+            log.info('No results available')
     else:
-        print('No results available')
+        log.info('No results available')
 
 def APIInteractions(app_name, report_path, connImagingRest):
-    print('Starting API Interactions report generation...')
+    log.info('Starting API Interactions report generation...')
     outputFile = '{0}/{1}_API_Interactions.csv'.format(report_path,app_name)
     apiNodes = connImagingRest.APILevel5Nodes(app_name)
     dtf_results = connImagingRest.ExportView(app_name, apiNodes)
     if not dtf_results.empty:
         dtf_results.to_csv(outputFile, index = False)
-        print('Successfully generated {0}'.format(outputFile))
+        log.info('Successfully generated {0}'.format(outputFile))
     else:
-        print('No results available')
+        log.info('No results available')
 
         
 '''     
@@ -544,12 +548,12 @@ def GenericCypherReport(query, sheetName, connNeo4j, outputFile):
     if not dtf_results.empty:
         with pd.ExcelWriter(outputFile) as writer:
             dtf_results.to_excel(writer, sheet_name=f'{sheetName}', index=False)
-        print('Successfully generated {0}'.format(outputFile))
+        log.info('Successfully generated {0}'.format(outputFile))
     else: 
-        print('No results available')
+        log.info('No results available')
     
 def ApiRepository(app_name, report_path, connNeo4j):
-    print('Starting the API Repository report generation...')
+    log.info('Starting the API Repository report generation...')
     cypher = """  
         MATCH (m:Module:`{0}`)-[:Contains]->(o1:Object)-[]-(o2:Object)<-[]-(l:Level5)
             WHERE l.Name CONTAINS "API"
@@ -559,7 +563,7 @@ def ApiRepository(app_name, report_path, connNeo4j):
     GenericCypherReport(cypher, sheetName, connNeo4j, outputFile)    
 
 def ApiName(app_name, report_path, connNeo4j): 
-    print('Starting the API Name report generation...')
+    log.info('Starting the API Name report generation...')
     cypher = """
         MATCH (m:Module:`{0}`)-[:Contains]->(o1:Object)-[]-(o2:Object)<-[]-(l:Level5)
             WHERE l.Name CONTAINS "API"
@@ -570,7 +574,7 @@ def ApiName(app_name, report_path, connNeo4j):
     GenericCypherReport(cypher, sheetName, connNeo4j, outputFile)
     
 def CloudReady(app_name, report_path, connNeo4j): 
-    print('Starting the Cloud Ready report generation...')
+    log.info('Starting the Cloud Ready report generation...')
     cypher = """
         MATCH (h:HighlightProperty)
         MATCH(o:`{0}`)-[r:Property]->(op:ObjectProperty)
@@ -586,7 +590,7 @@ def CloudReady(app_name, report_path, connNeo4j):
     GenericCypherReport(cypher, sheetName, connNeo4j, outputFile)
     
 def Containerization(app_name, report_path, connNeo4j): 
-    print('Starting the Containerization report generation...')
+    log.info('Starting the Containerization report generation...')
     cypher = """
         MATCH (h:HighlightProperty)
         MATCH(o:`{0}`)-[r:Property]->(op:ObjectProperty)
@@ -601,7 +605,7 @@ def Containerization(app_name, report_path, connNeo4j):
     GenericCypherReport(cypher, sheetName, connNeo4j, outputFile)
     
 def ComplexObjects(app_name, report_path, connNeo4j):
-    print('Starting the Complex Objects report generation...')
+    log.info('Starting the Complex Objects report generation...')
     queryObjects = """
         MATCH (o:Object:`{0}`)-[r]->(p:ObjectProperty) 
             WHERE p.Description CONTAINS 'Cyclomatic Complexity' 
@@ -621,12 +625,12 @@ def ComplexObjects(app_name, report_path, connNeo4j):
         with pd.ExcelWriter(outputFile) as writer:
             dtf_data_object.to_excel(writer, sheet_name="Complex Objects", index=False)
             dtf_data_subobject.to_excel(writer, sheet_name="Complex SubObjects", index=False)    
-        print('Successfully generated {0}'.format(outputFile))
+        log.info('Successfully generated {0}'.format(outputFile))
     else: 
-        print('No results available')
+        log.info('No results available')
         
 def CppRepo(app_name, report_path, connNeo4j): 
-    print('Starting the C++ Repo report generation...')
+    log.info('Starting the C++ Repo report generation...')
     cypher = """
         MATCH (o:Object:`{0}`)
         WHERE o.Type="C/C++ File" 
@@ -636,7 +640,7 @@ def CppRepo(app_name, report_path, connNeo4j):
     GenericCypherReport(cypher, sheetName, connNeo4j, outputFile)
 
 def DeadCode(app_name, report_path, connNeo4j):
-    print('Starting the Complex Objects report generation...')
+    log.info('Starting the Complex Objects report generation...')
     cypher = """
         MATCH (o:Object:`{0}`) 
             WHERE Not (o)-[]-(:Object)
@@ -650,7 +654,7 @@ def DeadCode(app_name, report_path, connNeo4j):
     GenericCypherReport(cypher, sheetName, connNeo4j, outputFile)
     
 def MainCallingShellProgram(app_name, report_path, connNeo4j): 
-    print('Starting the MainCallingShellProgram report generation...')
+    log.info('Starting the MainCallingShellProgram report generation...')
     cypher = """
         MATCH (caller:Object:`{0}`)-[:CALL]->(callee:Object:`{0}`)
         WHERE caller.Type="SHELL Program" 
@@ -661,7 +665,7 @@ def MainCallingShellProgram(app_name, report_path, connNeo4j):
     GenericCypherReport(cypher, sheetName, connNeo4j, outputFile)
 
 def ObjectLOC(app_name, report_path, connNeo4j): 
-    print('Starting the Object LOC report generation...')
+    log.info('Starting the Object LOC report generation...')
     cypher = """
         MATCH (o:Object:`{0}`)-[r]->(p:ObjectProperty) 
         WHERE p.Description CONTAINS "Number of code lines"
@@ -673,7 +677,7 @@ def ObjectLOC(app_name, report_path, connNeo4j):
     GenericCypherReport(cypher, sheetName, connNeo4j, outputFile)
     
 def ShellProgram(app_name, report_path, connNeo4j): 
-    print('Starting the Shell Program report generation...')
+    log.info('Starting the Shell Program report generation...')
     cypher = """
         MATCH (o:Object:`{0}`)
         WHERE o.Type="SHELL Program"   return distinct o.Name,o.FullName,o.Type""".format(app_name)
