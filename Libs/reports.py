@@ -2,73 +2,206 @@ import pandas as pd
 import time
 
 '''
-    Reports from CAST Highlight
+    Generate Project BOM Report
 '''
 
-def ProjectBOM(domainId, hl_app_name, report_path, connHL, aip_name, schema_prefix, connCSS):
+def ProjectBOMfromLocalFile(bom_path, report_path, aip_name, schema_prefix, connCSS, connNeo4j):
     print('Starting the Project BOM report generation...')
+    componentsMapping = []
+    logsDf = pd.read_excel(io= bom_path, header = 5, sheet_name ='Logs', usecols = "B:D")
+    for name,version,localPath in zip(logsDf["Name"],logsDf["Version"],logsDf["Local Path"]):
+        lpSplited = localPath.replace("\\","/").split("/")
+        repo = lpSplited[lpSplited.index("Analyzed")+1]
+        componentsMapping.append({
+                "Repository Name" : repo,
+                "Framework Name" : name,
+                "Framework Version" : version,
+                "Framework Path" : localPath                
+            })
+    GenerateProjectBOM(componentsMapping, report_path, aip_name, schema_prefix, connCSS, connNeo4j)
+
+def ProjectBOMfromHighLight(domainId, hl_app_name, report_path, connHL, aip_name, schema_prefix, connCSS, connNeo4j):
     componentsMapping = ApplicationComponentsMapping(domainId, hl_app_name, connHL)
+    GenerateProjectBOM(componentsMapping, report_path, aip_name, schema_prefix, connCSS, connNeo4j)
+
+def GenerateProjectBOM(componentsMapping, report_path, aip_name, schema_prefix, connCSS, connNeo4j):   
+    outputFile = f'{report_path}/{aip_name}_Project_BOM.xlsx'
+    writer = pd.ExcelWriter(outputFile)
+    
+    repoNames = []
+    frameworkList = []
+    associatedFrameworks = []
+    #auSheetList = {}
     projectInformation = ProjectsInformation(schema_prefix, connCSS)
-    
     if not projectInformation.empty and len(componentsMapping) > 0:
-    
-        repoNames = []
-        auSheetList = {}
-        outputFile = f'{report_path}/{aip_name}_Project_BOM.xlsx'
-        writer = pd.ExcelWriter(outputFile)
-        
-        frameworkList = []
         for projectName, projectPath in zip(projectInformation['Project Name'], projectInformation['Project Path']):
+            #print(f'Project path: {projectPath}')
             referenceSplit = projectPath.split("\\")
-            repositoryName = referenceSplit[referenceSplit.index("Analyzed")+1]
+            repoIndex = referenceSplit.index("Analyzed")+1
+            repositoryName = referenceSplit[repoIndex]
             repoNames.append(repositoryName)
-            projectFolder = '/' + referenceSplit[len(referenceSplit)-2] + '/'
-            
-            auList = []
+            projectFolder = 'Analyzed'
+            lastFolderIndex = 0
+            if "." in referenceSplit[len(referenceSplit)-1]:
+                lastFolderIndex = len(referenceSplit)-1
+            else:
+                lastFolderIndex = len(referenceSplit)
+            #print(referenceSplit)
+            #print(f"Last Folder: {referenceSplit[lastFolderIndex-1]} - {repoIndex} - {lastFolderIndex}")
+            for i in range(repoIndex, lastFolderIndex):
+                projectFolder = projectFolder + '/' + referenceSplit[i] 
+            #print(f'Project folder: {projectFolder}')
+            projectFolder = projectFolder + '/'
+            #projectFolder = '/' + referenceSplit[len(referenceSplit)-2] + '/'
+            #auList = []
             for component in componentsMapping:
-                frameworkPath = component.get("Framework Path")
+                frameworkPath = component.get("Framework Path").replace("\\","/")
                 if projectFolder in frameworkPath:
+                    #print(f'Framework Path: {frameworkPath}')
                     frameworkName = component.get("Framework Name")
                     frameworkVersion = component.get("Framework Version")
-                    
+                    '''
                     auDfRow = {}
                     auDfRow["Framework Name"] = frameworkName
                     auDfRow["Framework Version"] = frameworkVersion
                     auDfRow["Framework Path"] = frameworkPath
                     auList.append(auDfRow)
-                    
+                    '''
                     fwListRow = {}
                     fwListRow["Repository Name"] = repositoryName
                     fwListRow["Project Name"] = projectName
                     fwListRow["Project Path"] = projectPath
                     fwListRow["Framework Name"] = frameworkName
                     fwListRow["Framework Version"] = frameworkVersion
+                    fwListRow["Framework Path"] = frameworkPath
                     frameworkList.append(fwListRow)
-                    
+                    associatedFrameworks.append(frameworkName)
+            '''        
             if len(auList) > 0:
                 auDf = pd.DataFrame(auList)
                 if len(projectName)>30:
                     projectName = projectName[0:29]
-                auSheetList.update({projectName : auDf})
-                
-        #inputHL = pd.DataFrame(componentsMapping)      
-        #inputHL.to_excel(writer, sheet_name="HL Raw Data", index=False)
-        
-        frameworkDf = pd.DataFrame(frameworkList)
-        frameworkDf.to_excel(writer, sheet_name="Project_BOM(Bill of Material)", index=False)
-        
-        projectInformation.insert(0,'Repository Name', repoNames, True)
-        projectInformation.to_excel(writer, sheet_name="Project_TechnologyVersion", index=False)
-        
-        for auSheet in auSheetList:
-            sheetName = auSheet
-            if len(sheetName)>30:
-                sheetName = sheetName[0:29]
-            auSheetList[auSheet].to_excel(writer, sheet_name=sheetName, index=False)
-                         
-        writer.save()
-        print('Successfully generated {0}'.format(outputFile))
+                auSheetList.update({projectName : auDf})'''
+    #print(f'Used frameworks: {associatedFrameworks}')
+    orphanFrameworks = []
+    for component in componentsMapping:
+        if component.get("Framework Name") not in associatedFrameworks: orphanFrameworks.append(component) #.get("Framework Path"))
+    remainingOrphanFrameworks = orphanFrameworks[:]
+    #print(f'Orphan Frameworks: {orphanFrameworks}')
+    uaProjectInformation = UAProjectsInformation(schema_prefix, connCSS)
+    if not uaProjectInformation.empty and len(orphanFrameworks) > 0:
+        for uaProjectName, uaProjectPath, uaTechnology in zip(uaProjectInformation['Project Name'], uaProjectInformation['Project Path'], uaProjectInformation['Technology']):
+            #print(f'UA Project path: {uaProjectPath}')
+            #referenceSplit = uaProjectPath.split("\\")
+            #repositoryName = referenceSplit[len(referenceSplit)-1]
+            repoNames.append("N/A")
+            for framework in orphanFrameworks:
+                frameworkPath = framework.get("Framework Path")
+                frameworkName = framework.get("Framework Name")
+                frameworkVersion = framework.get("Framework Version")
+                if uaTechnology == 'HTML5' and ('.js' in frameworkPath.lower() or '.html' in frameworkPath.lower() or '.ts' in frameworkPath.lower()):
+                    #print(f'{uaTechnology} - {framework}')
+                    fwListRow = {}
+                    fwListRow["Repository Name"] = "N/A"
+                    fwListRow["Project Name"] = uaProjectName
+                    fwListRow["Project Path"] = uaProjectPath
+                    fwListRow["Framework Name"] = frameworkName
+                    fwListRow["Framework Version"] = frameworkVersion
+                    fwListRow["Framework Path"] = frameworkPath
+                    frameworkList.append(fwListRow)
+                    remainingOrphanFrameworks.remove(framework)
+                elif uaTechnology == 'Python' and '.py' in frameworkPath.lower():
+                    #print(f'{uaTechnology} - {framework}')
+                    fwListRow = {}
+                    fwListRow["Repository Name"] = repositoryName
+                    fwListRow["Project Name"] = uaProjectName
+                    fwListRow["Project Path"] = uaProjectPath
+                    fwListRow["Framework Name"] = frameworkName
+                    fwListRow["Framework Version"] = frameworkVersion
+                    fwListRow["Framework Path"] = frameworkPath
+                    frameworkList.append(fwListRow)
+                    remainingOrphanFrameworks.remove(framework)
+                elif uaTechnology == 'SHELL' and ('.sh' in frameworkPath.lower() or '.ksh' in frameworkPath.lower()): 
+                    #print(f'{uaTechnology} - {framework}')
+                    fwListRow = {}
+                    fwListRow["Repository Name"] = repositoryName
+                    fwListRow["Project Name"] = uaProjectName
+                    fwListRow["Project Path"] = uaProjectPath
+                    fwListRow["Framework Name"] = frameworkName
+                    fwListRow["Framework Version"] = frameworkVersion
+                    fwListRow["Framework Path"] = frameworkPath
+                    frameworkList.append(fwListRow)
+                    remainingOrphanFrameworks.remove(framework)
+                elif uaTechnology == 'PHP' and '.php' in frameworkPath.lower():
+                    #print(f'{uaTechnology} - {framework}')
+                    fwListRow = {}
+                    fwListRow["Repository Name"] = repositoryName
+                    fwListRow["Project Name"] = uaProjectName
+                    fwListRow["Project Path"] = uaProjectPath
+                    fwListRow["Framework Name"] = frameworkName
+                    fwListRow["Framework Version"] = frameworkVersion
+                    fwListRow["Framework Path"] = frameworkPath
+                    frameworkList.append(fwListRow)
+                    remainingOrphanFrameworks.remove(framework)
+                elif uaTechnology == 'Perl' and '.pl' in frameworkPath.lower():
+                    #print(f'{uaTechnology} - {framework}')
+                    fwListRow = {}
+                    fwListRow["Repository Name"] = repositoryName
+                    fwListRow["Project Name"] = uaProjectName
+                    fwListRow["Project Path"] = uaProjectPath
+                    fwListRow["Framework Name"] = frameworkName
+                    fwListRow["Framework Version"] = frameworkVersion
+                    fwListRow["Framework Path"] = frameworkPath
+                    frameworkList.append(fwListRow)
+                    remainingOrphanFrameworks.remove(framework)
+        projectInformation = pd.concat([projectInformation, uaProjectInformation])
+    projectInformation.insert(0,'Repository Name', repoNames, True)
     
+    cppRepo = CppRepo(aip_name, connNeo4j)
+    cppRepoList = []
+    if not cppRepo.empty:
+        for fullname in cppRepo['Object Fullname']:
+            if ".c" in fullname and "Analyzed" in fullname:
+                fullnameSplit = fullname.split('\\')
+                repo = fullnameSplit[fullnameSplit.index("Analyzed")+1]
+                projectName = ''
+                for i in range(fullnameSplit.index("Analyzed")+1,len(fullnameSplit)-1):
+                    if projectName == '': projectName = fullnameSplit[i]
+                    else: projectName = projectName + '\\' + fullnameSplit[i]
+                projectPath = ''
+                for i in range(0,len(fullnameSplit)-1):
+                    if projectPath == '': projectPath = fullnameSplit[i]
+                    else: projectPath = projectPath + '\\' + fullnameSplit[i]
+                projectPath = projectPath.replace('[','')
+                cppProject = {}
+                cppProject["Repository Name"] = repo
+                cppProject["Project Name"] = projectName
+                cppProject["Project Path"] = projectPath
+                cppProject["Technology"] = 'C++'
+                cppProject["Version"] = 'N/A'
+                #print(cppProject)
+                cppRepoList.append(cppProject)
+    
+    #print(cppRepoList)
+    if len(cppRepoList) > 0: 
+        cppRepoDf = pd.DataFrame(cppRepoList).drop_duplicates()
+        projectInformation = pd.concat([projectInformation, cppRepoDf]) 
+
+    frameworkDf = pd.DataFrame(frameworkList)
+    frameworkDf.to_excel(writer, sheet_name="Project_BOM(Bill of Material)", index=False)
+    projectInformation.to_excel(writer, sheet_name="Project_TechnologyVersion", index=False)
+    orphanFrameworkDf = pd.DataFrame(remainingOrphanFrameworks)
+    orphanFrameworkDf.to_excel(writer, sheet_name="Orphan Frameworks", index=False)
+    '''
+    for auSheet in auSheetList:
+        sheetName = auSheet
+        if len(sheetName)>30:
+            sheetName = sheetName[0:29]
+        auSheetList[auSheet].to_excel(writer, sheet_name=sheetName, index=False)
+    '''                     
+    writer.save()
+    print('Successfully generated {0}'.format(outputFile))
+        
 def ApplicationComponentsMapping(domainId, hl_app_name, connHL):
     applicationId = connHL.get_application_id(domainId, hl_app_name)
     return connHL.get_components_mapping(domainId, applicationId)
@@ -76,7 +209,7 @@ def ApplicationComponentsMapping(domainId, hl_app_name, connHL):
 def ProjectsInformation(schema_prefix, connCSS):
     sql = f"""
         select 
-            object_name as "Project Name", rootpath as "Project Path", '.NET' as "Technology", frameworkversion as "Version"
+            object_name as "Project Name", rootpath as "Project Path", '.Net' as "Technology", frameworkversion as "Version"
         from {schema_prefix}_mngt.cms_net_project
         union
         select 
@@ -86,155 +219,33 @@ def ProjectsInformation(schema_prefix, connCSS):
         select 
             object_name as "Project Name", rootpath as "Project Path", 'C++' as "Technology", devenv_usage as "Version"
         from {schema_prefix}_mngt.cms_cpp_project
+        union
+        select 
+            object_name as "Project Name", rootpath as "Project Path", 'ASP' as "Technology", 'N/A' as "Version"
+        from {schema_prefix}_mngt.cms_asp_project
+        union
+        select 
+            object_name as "Project Name", rootpath as "Project Path", 'VB' as "Technology", 'N/A' as "Version"
+        from {schema_prefix}_mngt.cms_vb_project
         order by "Project Name"
     """
     return connCSS.dfquery(sql)
 
-'''
-    Reports from Neo4j Cypher Queries
-'''
+def UAProjectsInformation(schema_prefix, connCSS):
+    sql = f"""
+        select 
+            object_name as "Project Name", rootpath as "Project Path", languagesstr as "Technology", 'N/A' as "Version"
+        from {schema_prefix}_mngt.cms_ua_project
+        order by "Project Name"
+    """
+    return connCSS.dfquery(sql)
 
-def GenericCypherReport(query, sheetName, connNeo4j, outputFile):
-    dtf_results = connNeo4j.dfquery(query)
-    if not dtf_results.empty:
-        with pd.ExcelWriter(outputFile) as writer:
-            dtf_results.to_excel(writer, sheet_name=f'{sheetName}', index=False)
-        print('Successfully generated {0}'.format(outputFile))
-    else: 
-        print('No results available')
-    
-def ApiRepository(app_name, report_path, connNeo4j):
-    print('Starting the API Repository report generation...')
-    cypher = """  
-        MATCH (m:Module:`{0}`)-[:Contains]->(o1:Object)-[]-(o2:Object)<-[]-(l:Level5)
-            WHERE l.Name CONTAINS "API"
-            RETURN DISTINCT m.Name as `Repository Name`, COLLECT(DISTINCT l.Name) as `API Name`""".format(app_name)
-    outputFile = '{0}/{1}_API_Repository.xlsx'.format(report_path,app_name)
-    sheetName = 'API'
-    GenericCypherReport(cypher, sheetName, connNeo4j, outputFile)    
-
-def ApiName(app_name, report_path, connNeo4j): 
-    print('Starting the API Name report generation...')
-    cypher = """
-        MATCH (m:Module:`{0}`)-[:Contains]->(o1:Object)-[]-(o2:Object)<-[]-(l:Level5)
-            WHERE l.Name CONTAINS "API"
-            RETURN DISTINCT l.Name as `API Name`""".format(app_name)
-    
-    outputFile = '{0}/{1}_API_Name.xlsx'.format(report_path,app_name)
-    sheetName = 'API Name'
-    GenericCypherReport(cypher, sheetName, connNeo4j, outputFile)
-    
-def CloudReady(app_name, report_path, connNeo4j): 
-    print('Starting the Cloud Ready report generation...')
-    cypher = """
-        MATCH (h:HighlightProperty)
-        MATCH(o:`{0}`)-[r:Property]->(op:ObjectProperty)
-        WHERE op.Id STARTS WITH h.AipId
-        AND op.Id ENDS WITH 'CloudReady'
-        RETURN o.AipId AS AipId,o.FullName AS PATH,o.Type as Type, 
-                r.value AS Value,op.Description AS Description,
-                op.Doc as Doc_link,op.Tags as Tags, 
-                o.InternalType as InternalType,o.Level as Level, 
-                o.Mangling as Mangling, o.Parent as Parent, o.Module as Module""".format(app_name)
-    outputFile = '{0}/{1}_CloudReady.xlsx'.format(report_path,app_name)
-    sheetName = 'Cloud Ready'
-    GenericCypherReport(cypher, sheetName, connNeo4j, outputFile)
-    
-def Containerization(app_name, report_path, connNeo4j): 
-    print('Starting the Containerization report generation...')
-    cypher = """
-        MATCH (h:HighlightProperty)
-        MATCH(o:`{0}`)-[r:Property]->(op:ObjectProperty)
-        WHERE op.Id STARTS WITH h.AipId
-        AND op.Id ENDS WITH 'Container'
-        RETURN o.AipId AS AipId,o.FullName AS PATH,o.Type as Type, r.value AS Value,
-                op.Description AS Description,op.Doc as Doc_link,op.Tags as Tags, 
-                o.InternalType as InternalType,o.Level as Level, o.Mangling as Mangling, 
-                o.Parent as Parent, o.Module as Module""".format(app_name)
-    outputFile = '{0}/{1}_Containerization.xlsx'.format(report_path,app_name)
-    sheetName = 'Containerization'
-    GenericCypherReport(cypher, sheetName, connNeo4j, outputFile)
-    
-def ComplexObjects(app_name, report_path, connNeo4j):
-    print('Starting the Complex Objects report generation...')
-    queryObjects = '''
-        MATCH (o:Object:`{0}`)-[r]->(p:ObjectProperty) 
-            WHERE p.Description CONTAINS 'Cyclomatic Complexity' 
-            RETURN DISTINCT 
-                o.AipId as `object_id`,o.Type as `Object Type`, o.FullName as `Object Fullname`, 
-                o.File as `Object Path`, o.Name as `Object Name`,r.value as `Complexity`;'''.format(app_name)
-    querySubObjects = """
-        MATCH (o:SubObject:`{0}`)-[r]->(p:ObjectProperty) 
-            WHERE p.Description CONTAINS 'Cyclomatic Complexity' 
-            RETURN DISTINCT 
-                o.AipId as `object_id`,o.Type as `Object Type`, o.FullName as `Object Fullname`, 
-                o.File as `Object Path`, o.Name as `Object Name`,r.value as `Complexity`;""".format(app_name)
-    outputFile = '{0}/{1}_Complex_Objects.xlsx'.format(report_path,app_name)
-    dtf_data_object = connNeo4j.dfquery(queryObjects)
-    dtf_data_subobject = connNeo4j.dfquery(querySubObjects)
-    if not(dtf_data_object.empty and dtf_data_subobject.empty):
-        with pd.ExcelWriter(outputFile) as writer:
-            dtf_data_object.to_excel(writer, sheet_name="Complex Objects", index=False)
-            dtf_data_subobject.to_excel(writer, sheet_name="Complex SubObjects", index=False)    
-        print('Successfully generated {0}'.format(outputFile))
-    else: 
-        print('No results available')
-        
-def CppRepo(app_name, report_path, connNeo4j): 
-    print('Starting the C++ Repo report generation...')
+def CppRepo(aip_name, connNeo4j):
     cypher = """
         MATCH (o:Object:`{0}`)
         WHERE o.Type="C/C++ File" 
-        RETURN distinct o.Name as `Object Name`, o.FullName as `Object Fullname`, o.Type as `Object Type`""".format(app_name)
-    outputFile = '{0}/{1}_C++Repo.xlsx'.format(report_path,app_name)
-    sheetName = 'C++ Repo'
-    GenericCypherReport(cypher, sheetName, connNeo4j, outputFile)
-
-def DeadCode(app_name, report_path, connNeo4j):
-    print('Starting the Complex Objects report generation...')
-    cypher = """
-        MATCH (o:Object:`{0}`) 
-            WHERE Not (o)-[]-(:Object)
-            RETURN DISTINCT o.Type, o.Name, o.File, o.FullName
-        UNION ALL
-        MATCH (o:SubObject:`{0}`) 
-            WHERE Not (o)-[]-(:SubObject)
-            RETURN DISTINCT o.Type, o.Name, o.File, o.FullName""".format(app_name)
-    outputFile = '{0}/{1}_Dead_Code.xlsx'.format(report_path,app_name)
-    sheetName = 'Dead Code'
-    GenericCypherReport(cypher, sheetName, connNeo4j, outputFile)
-    
-def MainCallingShellProgram(app_name, report_path, connNeo4j): 
-    print('Starting the MainCallingShellProgram report generation...')
-    cypher = """
-        MATCH (caller:Object:`{0}`)-[:CALL]->(callee:Object:`{0}`)
-        WHERE caller.Type="SHELL Program" 
-        AND NOT (()-[:CALL]->(caller))
-        RETURN caller.Name,caller.FullName,caller.Type,callee.Name,callee.FullName,callee.Type""".format(app_name)
-    outputFile = '{0}/{1}_MainCallingShellProgram.xlsx'.format(report_path,app_name)
-    sheetName = 'MainCallingShellProgram'
-    GenericCypherReport(cypher, sheetName, connNeo4j, outputFile)
-
-def ObjectLOC(app_name, report_path, connNeo4j): 
-    print('Starting the Object LOC report generation...')
-    cypher = """
-        MATCH (o:Object:`{0}`)-[r]->(p:ObjectProperty) 
-        WHERE p.Description CONTAINS "Number of code lines"
-        RETURN DISTINCT o.AipId as `Object Id`,o.Type as `Object Type`, 
-            o.FullName as `Object Fullname`, o.Name as `Object Name`,
-            r.value as `Number of code lines`""".format(app_name)
-    outputFile = '{0}/{1}_Object_LOC.xlsx'.format(report_path,app_name)
-    sheetName = 'LinesOfCode'
-    GenericCypherReport(cypher, sheetName, connNeo4j, outputFile)
-    
-def ShellProgram(app_name, report_path, connNeo4j): 
-    print('Starting the Shell Program report generation...')
-    cypher = """
-        MATCH (o:Object:`{0}`)
-        WHERE o.Type="SHELL Program"   return distinct o.Name,o.FullName,o.Type""".format(app_name)
-    outputFile = '{0}/{1}_Shell_Program.xlsx'.format(report_path,app_name)
-    sheetName = 'ShellProgram_list'
-    GenericCypherReport(cypher, sheetName, connNeo4j, outputFile)
+        RETURN distinct o.Name as `Object Name`, o.FullName as `Object Fullname`, o.Type as `Object Type`""".format(aip_name)
+    return connNeo4j.dfquery(cypher)
     
 '''
     Reports from Postgres SQL Queries
@@ -303,12 +314,14 @@ def NetProjectInformation(app_name, schema_prefix, report_path, connCSS):
    
 def Repository_Technology(app_name, schema_prefix, report_path, connCSS):
     print('Starting the Repository Technology report generation...')
+    """
     sql =f'''
         TODO
     '''
     outputFile = '{0}/{1}_Repository_Technology.xlsx'.format(report_path,app_name) 
     sheetName = 'Results'  
-    #GenericSQLReport(sql, sheetName, connCSS, outputFile)
+    GenericSQLReport(sql, sheetName, connCSS, outputFile)
+    """
    
 def Technology_LOC(app_name, schema_prefix, report_path, connCSS):
     print('Starting the Technology LOC report generation...')
@@ -371,7 +384,7 @@ def CleanNameForReport(complex_name):
     return filename  
  
 '''
-    Reports from Imaging
+    Reports from Imaging REST API
 '''
 
 def GenerateImagingReportsAsync(app_name, report_path, standardReportsList, connImagingRest, retriesNumber, retryTime):
@@ -456,9 +469,10 @@ def APIInteractions(app_name, report_path, connImagingRest):
         print('Successfully generated {0}'.format(outputFile))
     else:
         print('No results available')
+
         
 '''     
-To be deleted
+@deprecated: 
 
 def GenerateMostReferencedObjects(app_name, connImagingRest):
     report_id = '7'
@@ -493,4 +507,152 @@ def GetAllImagingReportsAsync(app_name, report_path, connImagingRest, retriesNum
         CheckStatusAndDownloadReport(app_name, report_path, connImagingRest)
         time.sleep(retryTime)
         i = i + 1
+'''
+
+'''
+    @deprecated: 
+    Reports from Neo4j Cypher Queries
+
+
+def GenericCypherReport(query, sheetName, connNeo4j, outputFile):
+    dtf_results = connNeo4j.dfquery(query)
+    if not dtf_results.empty:
+        with pd.ExcelWriter(outputFile) as writer:
+            dtf_results.to_excel(writer, sheet_name=f'{sheetName}', index=False)
+        print('Successfully generated {0}'.format(outputFile))
+    else: 
+        print('No results available')
+    
+def ApiRepository(app_name, report_path, connNeo4j):
+    print('Starting the API Repository report generation...')
+    cypher = """  
+        MATCH (m:Module:`{0}`)-[:Contains]->(o1:Object)-[]-(o2:Object)<-[]-(l:Level5)
+            WHERE l.Name CONTAINS "API"
+            RETURN DISTINCT m.Name as `Repository Name`, COLLECT(DISTINCT l.Name) as `API Name`""".format(app_name)
+    outputFile = '{0}/{1}_API_Repository.xlsx'.format(report_path,app_name)
+    sheetName = 'API'
+    GenericCypherReport(cypher, sheetName, connNeo4j, outputFile)    
+
+def ApiName(app_name, report_path, connNeo4j): 
+    print('Starting the API Name report generation...')
+    cypher = """
+        MATCH (m:Module:`{0}`)-[:Contains]->(o1:Object)-[]-(o2:Object)<-[]-(l:Level5)
+            WHERE l.Name CONTAINS "API"
+            RETURN DISTINCT l.Name as `API Name`""".format(app_name)
+    
+    outputFile = '{0}/{1}_API_Name.xlsx'.format(report_path,app_name)
+    sheetName = 'API Name'
+    GenericCypherReport(cypher, sheetName, connNeo4j, outputFile)
+    
+def CloudReady(app_name, report_path, connNeo4j): 
+    print('Starting the Cloud Ready report generation...')
+    cypher = """
+        MATCH (h:HighlightProperty)
+        MATCH(o:`{0}`)-[r:Property]->(op:ObjectProperty)
+        WHERE op.Id STARTS WITH h.AipId
+        AND op.Id ENDS WITH 'CloudReady'
+        RETURN o.AipId AS AipId,o.FullName AS PATH,o.Type as Type, 
+                r.value AS Value,op.Description AS Description,
+                op.Doc as Doc_link,op.Tags as Tags, 
+                o.InternalType as InternalType,o.Level as Level, 
+                o.Mangling as Mangling, o.Parent as Parent, o.Module as Module""".format(app_name)
+    outputFile = '{0}/{1}_CloudReady.xlsx'.format(report_path,app_name)
+    sheetName = 'Cloud Ready'
+    GenericCypherReport(cypher, sheetName, connNeo4j, outputFile)
+    
+def Containerization(app_name, report_path, connNeo4j): 
+    print('Starting the Containerization report generation...')
+    cypher = """
+        MATCH (h:HighlightProperty)
+        MATCH(o:`{0}`)-[r:Property]->(op:ObjectProperty)
+        WHERE op.Id STARTS WITH h.AipId
+        AND op.Id ENDS WITH 'Container'
+        RETURN o.AipId AS AipId,o.FullName AS PATH,o.Type as Type, r.value AS Value,
+                op.Description AS Description,op.Doc as Doc_link,op.Tags as Tags, 
+                o.InternalType as InternalType,o.Level as Level, o.Mangling as Mangling, 
+                o.Parent as Parent, o.Module as Module""".format(app_name)
+    outputFile = '{0}/{1}_Containerization.xlsx'.format(report_path,app_name)
+    sheetName = 'Containerization'
+    GenericCypherReport(cypher, sheetName, connNeo4j, outputFile)
+    
+def ComplexObjects(app_name, report_path, connNeo4j):
+    print('Starting the Complex Objects report generation...')
+    queryObjects = """
+        MATCH (o:Object:`{0}`)-[r]->(p:ObjectProperty) 
+            WHERE p.Description CONTAINS 'Cyclomatic Complexity' 
+            RETURN DISTINCT 
+                o.AipId as `object_id`,o.Type as `Object Type`, o.FullName as `Object Fullname`, 
+                o.File as `Object Path`, o.Name as `Object Name`,r.value as `Complexity`;""".format(app_name)
+    querySubObjects = """
+        MATCH (o:SubObject:`{0}`)-[r]->(p:ObjectProperty) 
+            WHERE p.Description CONTAINS 'Cyclomatic Complexity' 
+            RETURN DISTINCT 
+                o.AipId as `object_id`,o.Type as `Object Type`, o.FullName as `Object Fullname`, 
+                o.File as `Object Path`, o.Name as `Object Name`,r.value as `Complexity`;""".format(app_name)
+    outputFile = '{0}/{1}_Complex_Objects.xlsx'.format(report_path,app_name)
+    dtf_data_object = connNeo4j.dfquery(queryObjects)
+    dtf_data_subobject = connNeo4j.dfquery(querySubObjects)
+    if not(dtf_data_object.empty and dtf_data_subobject.empty):
+        with pd.ExcelWriter(outputFile) as writer:
+            dtf_data_object.to_excel(writer, sheet_name="Complex Objects", index=False)
+            dtf_data_subobject.to_excel(writer, sheet_name="Complex SubObjects", index=False)    
+        print('Successfully generated {0}'.format(outputFile))
+    else: 
+        print('No results available')
+        
+def CppRepo(app_name, report_path, connNeo4j): 
+    print('Starting the C++ Repo report generation...')
+    cypher = """
+        MATCH (o:Object:`{0}`)
+        WHERE o.Type="C/C++ File" 
+        RETURN distinct o.Name as `Object Name`, o.FullName as `Object Fullname`, o.Type as `Object Type`""".format(app_name)
+    outputFile = '{0}/{1}_C++Repo.xlsx'.format(report_path,app_name)
+    sheetName = 'C++ Repo'
+    GenericCypherReport(cypher, sheetName, connNeo4j, outputFile)
+
+def DeadCode(app_name, report_path, connNeo4j):
+    print('Starting the Complex Objects report generation...')
+    cypher = """
+        MATCH (o:Object:`{0}`) 
+            WHERE Not (o)-[]-(:Object)
+            RETURN DISTINCT o.Type, o.Name, o.File, o.FullName
+        UNION ALL
+        MATCH (o:SubObject:`{0}`) 
+            WHERE Not (o)-[]-(:SubObject)
+            RETURN DISTINCT o.Type, o.Name, o.File, o.FullName""".format(app_name)
+    outputFile = '{0}/{1}_Dead_Code.xlsx'.format(report_path,app_name)
+    sheetName = 'Dead Code'
+    GenericCypherReport(cypher, sheetName, connNeo4j, outputFile)
+    
+def MainCallingShellProgram(app_name, report_path, connNeo4j): 
+    print('Starting the MainCallingShellProgram report generation...')
+    cypher = """
+        MATCH (caller:Object:`{0}`)-[:CALL]->(callee:Object:`{0}`)
+        WHERE caller.Type="SHELL Program" 
+        AND NOT (()-[:CALL]->(caller))
+        RETURN caller.Name,caller.FullName,caller.Type,callee.Name,callee.FullName,callee.Type""".format(app_name)
+    outputFile = '{0}/{1}_MainCallingShellProgram.xlsx'.format(report_path,app_name)
+    sheetName = 'MainCallingShellProgram'
+    GenericCypherReport(cypher, sheetName, connNeo4j, outputFile)
+
+def ObjectLOC(app_name, report_path, connNeo4j): 
+    print('Starting the Object LOC report generation...')
+    cypher = """
+        MATCH (o:Object:`{0}`)-[r]->(p:ObjectProperty) 
+        WHERE p.Description CONTAINS "Number of code lines"
+        RETURN DISTINCT o.AipId as `Object Id`,o.Type as `Object Type`, 
+            o.FullName as `Object Fullname`, o.Name as `Object Name`,
+            r.value as `Number of code lines`""".format(app_name)
+    outputFile = '{0}/{1}_Object_LOC.xlsx'.format(report_path,app_name)
+    sheetName = 'LinesOfCode'
+    GenericCypherReport(cypher, sheetName, connNeo4j, outputFile)
+    
+def ShellProgram(app_name, report_path, connNeo4j): 
+    print('Starting the Shell Program report generation...')
+    cypher = """
+        MATCH (o:Object:`{0}`)
+        WHERE o.Type="SHELL Program"   return distinct o.Name,o.FullName,o.Type""".format(app_name)
+    outputFile = '{0}/{1}_Shell_Program.xlsx'.format(report_path,app_name)
+    sheetName = 'ShellProgram_list'
+    GenericCypherReport(cypher, sheetName, connNeo4j, outputFile)
 '''

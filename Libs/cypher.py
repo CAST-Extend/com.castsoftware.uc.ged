@@ -1,5 +1,5 @@
 """
-    Read and validate configuartion json file
+    Read and validate configuration json file
 """
 from imagingNeo4j import Neo4jConnection
 from logging import WARN,INFO,DEBUG
@@ -31,7 +31,7 @@ class Cypher():
             self.log.debug("Done")
         except JSONDecodeError as e:
             msg = str(e)
-            self.log.error(f'Configuration file error: {e}')
+            self.log.error(f'Configuration file error: {msg}')
             raise ValueError("Invalid JSon Format in query.json")
 
         except ValueError as e:
@@ -44,7 +44,7 @@ class Cypher():
             makedirs(cypherDir)
 
         for rpt in self.__data:
-            filename = rpt['report']
+            filename = rpt['report'].replace('{config.aip_name}',self.__config.aip_name)
             filename = f'{cypherDir}/{filename}.xlsx'
             self.log.info(f'Working on {filename}')
 
@@ -112,7 +112,7 @@ class Cypher():
             with open("query.json", 'w') as query_file:
                 dump(self.__data,query_file, ensure_ascii=False, indent=4)
 
-
+'''
 import argparse
 from config import Config
 
@@ -125,3 +125,4 @@ c = Config(args.config)
 cypher = Cypher(c,log_level=INFO)
 cypher.run()
 cypher.updateQueryFile()
+'''
