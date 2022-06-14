@@ -1,11 +1,38 @@
 [
     {
+        "report": "{config.aip_name}Project_Information",
+        "ouputFolder" : "Postgres",
+        "tabs": [
+            {
+                "queryName": "ASP",
+            	"queryType" : "css",
+                "query": [
+                    "select object_name as \"Project Name\", rootpath as \"Project Reference\" from {config.aip_triplet_prefix}_mngt.cms_asp_project"
+                ]
+            },
+            {
+                "queryName": "ASM",
+            	"queryType" : "css",
+                "query": [
+                    "select assemblypath as \"Assembly Name\" from {config.aip_triplet_prefix}_mngt.cms_net_assembly_file"
+                ]
+            },
+            {
+                "queryName": "CPP",
+            	"queryType" : "css",
+                "query": [
+                    "select object_name as \"Project Name\", rootpath as \"Project Reference\" from {config.aip_triplet_prefix}_mngt.cms_cpp_project"
+                ]
+            }
+        ]
+    },
+    {
         "report": "{config.aip_name}_Complex_Objects",
         "ouputFolder" : "Cypher",
         "tabs": [
             {
+                "queryName": "CC - Objects",
             	"queryType" : "cypher",
-                "name": "CC - Objects",
                 "query": [
                     "MATCH (o:Object:{config.aip_name})-[r]->(p:ObjectProperty)",
                     "WHERE p.Description CONTAINS 'Cyclomatic Complexity'",
@@ -43,7 +70,8 @@
                 }
             },
             {
-                "name": "CC - Sub objects",
+                "queryName": "CC - Sub objects",
+            	"queryType" : "cypher",
                 "query": [
                     "MATCH (o:SubObject:{config.aip_name})-[r]->(p:ObjectProperty)",
                     "WHERE p.Description CONTAINS 'Cyclomatic Complexity'",
@@ -84,9 +112,11 @@
     },
     {
         "report": "{config.aip_name}_Dead_Code",
+        "ouputFolder" : "Cypher",
         "tabs": [
             {
-                "name": "DeadCode",
+                "queryName": "DeadCode",
+            	"queryType" : "cypher",
                 "query": [
                     "MATCH (o:Object:`{config.aip_name}`) WHERE Not (o)-[]-(:Object) ",
                     "with o ",
@@ -119,9 +149,11 @@
     },
     {
         "report": "{config.aip_name}_API",
+        "ouputFolder" : "Cypher",
         "tabs": [
             {
-                "name": "API",
+                "queryName": "API",
+            	"queryType" : "cypher",
                 "query": [
                     "MATCH (m:Module:{config.aip_name})-[:Contains]->(o1:Object)-[]-(o2:Object)<-[]-(l:Level5) ",
                     "WHERE l.Name CONTAINS 'API' ",
@@ -140,9 +172,11 @@
     },
     {
         "report": "{config.aip_name}_API_Name",
+        "ouputFolder" : "Cypher",
         "tabs": [
             {
-                "name": "API Name",
+                "queryName": "API Name",
+            	"queryType" : "cypher",
                 "query": [
                     "MATCH (m:Module:{config.aip_name})-[:Contains]->(o1:Object)-[]-(o2:Object)<-[]-(l:Level5) ",
                     "WHERE l.Name CONTAINS 'API' ",
@@ -158,9 +192,11 @@
     },
     {
         "report": "{config.aip_name}_ShellProgram",
+        "ouputFolder" : "Cypher",
         "tabs": [
             {
-                "name": "ShellProgram",
+                "queryName": "ShellProgram",
+            	"queryType" : "cypher",
                 "query": [
                     "MATCH (o:Object: {config.aip_name})",
                     "WHERE o.Type = 'SHELL Program'",
@@ -185,9 +221,11 @@
     },
     {
         "report": "{config.aip_name}_MainCallingShellProgram",
+        "ouputFolder" : "Cypher",
         "tabs": [
             {
-                "name": "MainCallingShellProgram",
+                "queryName": "MainCallingShellProgram",
+            	"queryType" : "cypher",
                 "query": [
                     "MATCH (caller:Object:{config.aip_name})-[:CALL]->(callee:Object:ATCS)",
 					"WHERE caller.Type='SHELL Program' ",
@@ -225,9 +263,11 @@
     },
     {
         "report": "{config.aip_name}_C++Repo",
+        "ouputFolder" : "Cypher",
         "tabs": [
             {
-                "name": "C++ Repo",
+                "queryName": "C++ Repo",
+            	"queryType" : "cypher",
                 "query": [
                     "MATCH (o:Object:{config.aip_name}) ",
 					"WHERE o.Type='C/C++ File' ",
@@ -254,9 +294,11 @@
     },
     {
         "report": "{config.aip_name}_CloudReady",
+        "ouputFolder" : "Cypher",
         "tabs": [
             {
-                "name": "Cloud Ready",
+                "queryName": "Cloud Ready",
+            	"queryType" : "cypher",
                 "query": [
                     "MATCH (h:HighlightProperty)",
 					"MATCH(o:{config.aip_name})-[r:Property]->(op:ObjectProperty)",
@@ -298,9 +340,11 @@
     },
     {
         "report": "{config.aip_name}_Containerization",
+        "ouputFolder" : "Cypher",
         "tabs": [
             {
-                "name": "Containerization",
+                "queryName": "Containerization",
+            	"queryType" : "cypher",
                 "query": [
                     "MATCH (h:HighlightProperty)",
 					"MATCH(o:{config.aip_name})-[r:Property]->(op:ObjectProperty)",
@@ -342,9 +386,11 @@
     },
     {
         "report": "{config.aip_name}_Object_LOC",
+        "ouputFolder" : "Cypher",
         "tabs": [
             {
-                "name": "Object_LOC",
+                "queryName": "Object_LOC",
+            	"queryType" : "cypher",
                 "query": [
                     "MATCH (o:Object:{config.aip_name})-[r]->(p:ObjectProperty) WHERE p.Description CONTAINS 'Number of code lines'",
 					"WITH o,r.value as `Numberofcodelines` ",
@@ -377,9 +423,11 @@
     },
     {
         "report": "{config.aip_name}_ObjectCount",
+        "ouputFolder" : "Cypher",
         "tabs": [
             {
-                "name": "ObjectCount",
+                "queryName": "ObjectCount",
+            	"queryType" : "cypher",
                 "query": [
                     "MATCH (o:Object:{config.aip_name})",
 					"RETURN DISTINCT o.Type as `Type`,COUNT(DISTINCT o.AipId) as `Total`",  
@@ -398,9 +446,11 @@
     },
     {
         "report": "{config.aip_name}_Object_LOC_Summary",
+        "ouputFolder" : "Cypher",
         "tabs": [
             {
-                "name": "Object_LOC_Summary",
+                "queryName": "Object_LOC_Summary",
+            	"queryType" : "cypher",
                 "query": [
                     "MATCH (o:Object:{config.aip_name})",
 					"WITH  o ",
@@ -423,9 +473,11 @@
     },
     {
         "report": "{config.aip_name}_DB_HasReferences",
+        "ouputFolder" : "Cypher",
         "tabs": [
             {
-                "name": "SQL Tables",
+                "queryName": "SQL Tables",
+            	"queryType" : "cypher",
                 "query": [
 					"MATCH (caller:Object:{config.aip_name})-[r1]->(callee:Object:{config.aip_name})",
 					"WHERE callee.Type contains 'Table'",
@@ -440,7 +492,8 @@
                 }
             },
             {
-                "name": "SQL Stored Procedures",
+                "queryName": "SQL Stored Procedures",
+            	"queryType" : "cypher",
                 "query": [
 					"MATCH (caller:Object:{config.aip_name})-[r1]->(callee:Object:{config.aip_name})",
 					"WHERE callee.Type contains 'Procedure'",
@@ -455,7 +508,8 @@
                 }
             },
             {
-                "name": "SQL Views",
+                "queryName": "SQL Views",
+            	"queryType" : "cypher",
                 "query": [
 					"MATCH (caller:Object:{config.aip_name})-[r1]->(callee:Object:{config.aip_name})",
 					"WHERE callee.Type contains 'View'",
@@ -473,9 +527,11 @@
     },
     {
         "report": "{config.aip_name}_DB_NoCallers",
+        "ouputFolder" : "Cypher",
         "tabs": [
             {
-                "name": "DB_NoCallers",
+                "queryName": "DB_NoCallers",
+            	"queryType" : "cypher",
                 "query": [
                     "MATCH (o:Object:{config.aip_name})",
 					"WHERE o.Type contains 'Procedure' AND NOT (:Object)-[]->(o)",
