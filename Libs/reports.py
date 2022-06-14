@@ -259,7 +259,7 @@ def ProjectsInformation(schema_prefix, connCSS):
 def UAProjectsInformation(schema_prefix, connCSS):
     sql = f"""
         select 
-            object_name as "Project Name", rootpath as "Project Path", languagesstr as "Technology", 'Unknown' as "Version"
+            languagesstr as "Project Name", rootpath as "Project Path", languagesstr as "Technology", 'Unknown' as "Version"
         from {schema_prefix}_mngt.cms_ua_project
         order by "Project Name"
     """
