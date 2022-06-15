@@ -1,9 +1,323 @@
 [
     {
-        "report": "Complexity-Objects",
+        "report": "{config.aip_name}_Repo_Calls",
+        "ouputFolder" : "Summary_Information",
         "tabs": [
             {
-                "name": "CC-Summary",
+                "queryName": "Repo_Calls_Inbound",
+            	"queryType" : "cypher",
+                "query": [
+                    "MATCH (m:Module:{config.aip_name})-[:Contains]->(o1:Object)-[]->(o2:Object)<-[:Contains]-(m2:Module:{config.aip_name})",
+					"WHERE NOT m.Name=m2.Name",
+					"RETURN DISTINCT m2.Name as TargetRepository,  SIZE(COLLECT( DISTINCT m.Name)) as SourceRepository, COUNT(o2) as NumberOfCalls"
+                ]
+            },
+            {
+                "queryName": "Repo_Calls_Outbound",
+            	"queryType" : "cypher",
+                "query": [
+                    "MATCH (m:Module:{config.aip_name})-[:Contains]->(o1:Object)-[]->(o2:Object)<-[:Contains]-(m2:Module:{config.aip_name})",
+					"WHERE NOT m.Name=m2.Name",
+					"RETURN DISTINCT m.Name as SourceRepository,  SIZE(COLLECT( DISTINCT m2.Name)) as TargetRepository, COUNT(o1) as NumberOfCalls"
+                ]
+            },
+            {
+                "queryName": "Repo_Calls_details",
+            	"queryType" : "cypher",
+                "query": [
+                    "MATCH (m:Module:{config.aip_name})-[:Contains]->(o1:Object)-[]->(o2:Object)<-[:Contains]-(m2:Module:{config.aip_name})",
+					"WHERE NOT m.Name=m2.Name",
+					"RETURN DISTINCT m.Name as SourceRepository, m2.Name as TargetRepository, COUNT(o1) as NumberOfCalls"
+                ]
+            },
+            {
+                "queryName": "SQL DB Calls",
+            	"queryType" : "css",
+                "query": [
+                	"select",
+						"substring(t1.path,'.*\\\\Analyzed\\\\(.*?)\\\\.*') Source_repo_name , COUNT(acc.idacc)  ",
+					"from {config.aip_triplet_prefix}_local.refpath t1, {config.aip_triplet_prefix}_local.objfilref t2, {config.aip_triplet_prefix}_local.cdt_objects t3, {config.aip_triplet_prefix}_local.cdt_objects tt3, {config.aip_triplet_prefix}_local.acc  ",
+					"where t1.idfilref = t2.idfilref",
+						"and t2.idobj = t3.object_id  ",
+						"and acc.idclr = t3.object_id and  tt3.object_id=acc.idcle ",
+						"and t3.object_type_Str not in ('File which contains source code') and (tt3.object_type_Str in (select distinct(object_type_str) from {config.aip_triplet_prefix}_local.cdt_objects where object_language_name like '%%SQL%%' and lower(object_type_str) not like '%%column%%'",
+						"and object_type_str not like '%%SQL Script%%' and lower(object_type_str) not like '%%index%%' and  lower(object_type_str) not like '%%key%%' ",
+						"and  lower(object_type_str) not like '%%project%%' and  lower(object_type_str) not like '%%constraint%%' and  lower(object_type_str) not like '%%schema%%' ",
+						"and  lower(object_type_str) not like '%%subset%%' and  lower(object_type_str) not like '%%synonym%%' and  lower(object_type_str) not like '%%database%%') )  ",
+					"group by Source_repo_name order by 1"
+                ]
+            },
+            {
+                "queryName": "NOSQL DB Calls",
+            	"queryType" : "css",
+                "query": [
+                    "select ",
+						"substring(t1.path,'.*\\\\Analyzed\\\\(.*?)\\\\.*') Source_repo_name , COUNT(acc.idacc)  ",
+					"from {config.aip_triplet_prefix}_local.refpath t1, {config.aip_triplet_prefix}_local.objfilref t2, {config.aip_triplet_prefix}_local.cdt_objects t3, {config.aip_triplet_prefix}_local.cdt_objects tt3, {config.aip_triplet_prefix}_local.acc  ",
+					"where t1.idfilref = t2.idfilref",
+						"and t2.idobj = t3.object_id  ",
+						" and acc.idclr = t3.object_id and  tt3.object_id=acc.idcle ",
+						"and t3.object_type_Str not in ('File which contains source code') and  ( tt3.object_type_Str in   ",
+						" ('NodeJS MongoDB collection','NodeJS collection','NodeJS unknown database table','Java Couchbase connection','Java MongoDB database',",
+						"'Java unknown MongoDB database',",
+						"'Java unknown MongoDB collection',",
+						"'Java MongoDB collection',",
+						"'Java MarkLogic database',",
+						"'Java MarkLogic collection',",
+						"'Java unknown MarkLogic collection',",
+						"'Java unknown MarkLogic database',",
+						"'Java Couchbase connection',",
+						"'Java Couchbase collection',",
+						"'Java Couchbase database',",
+						"'Java Unknown Couchbase connection',",
+						"'Java Unknown Couchbase collection',",
+						"'Java Unknown Couchbase database',",
+						"'Java CouchDB connection',",
+						"'Java CouchDB collection',",
+						"'Java CouchDB database',",
+						"'Java Unknown CouchDB connection',",
+						"'Java Unknown CouchDB collection',",
+						"'Java Unknown CouchDB database',",
+						"'Java DynamoDB Artifacts',",
+						"'Java DynamoDB Client',",
+						"'Java DynamoDB Table',",
+						"'Java Unknown DynamoDB Client',",
+						"'Java Unknown DynamoDB Table',",
+						"'Java Redis connection',",
+						"'Java Redis collection',",
+						"'Java unknown Redis connection',",
+						"'Java unknown Redis collection',",
+						"'Java CosmosDB database',",
+						"'Java CosmosDB collection',",
+						"'Java Unknown CosmosDB database',",
+						"'Java Unknown CosmosDB collection',",
+						"'Java Couchbase Cluster',",
+						"'Java Couchbase Bucket',",
+						"'Java Unknown Couchbase Cluster',",
+						"'Java Couchbase collection',",
+						"'Java Unknown Couchbase collection',",
+						"'Java Couchbase collection',",
+						"'Java Unknown Couchbase collection',",
+						"'Java Memcached connection',",
+						"'Java Memcached data',",
+						"'Java Unknown Memcached connection',",
+						"'Java Unknown Memcached data',",
+						"'Java Unknown Couchbase Bucket',",
+						"'Java Unknown ElasticSearch Cluster',",
+						"'Java ElasticSearch Cluster',",
+						"'Java Elasticsearch Index',",
+						"'Java Unknown Elasticsearch Index',",
+						"'DotNet MongoDB connection',",
+						"'DotNet MongoDB database',",
+						"'DotNet unknown MongoDB collection',",
+						"'DotNet unknown MongoDB database',",
+						"'DotNet MongoDB collection',",
+						"'DotNet unknown MongoDB connection',",
+						"'DotNet DynamoDB Artifacts',",
+						"'DotNet DynamoDB Client',",
+						"'DotNet DynamoDB Table',",
+						"'DotNet Unknown DynamoDB Client',",
+						"'DotNet Unknown DynamoDB Table',",
+						"'DotNet CosmosDB Artifacts',",
+						"'DotNet CosmosDB database',",
+						"'DotNet CosmosDB collection',",
+						"'DotNet Unknown CosmosDB database',",
+						"'DotNet Unknown CosmosDB collection',",
+						"'DotNet Couchbase Artifacts',",
+						"'DotNet Couchbase Cluster',",
+						"'DotNet Couchbase Bucket',",
+						"'DotNet Unknown Couchbase Cluster',",
+						"'DotNet Unknown Couchbase Bucket',",
+						"'DotNet Memcached Artifacts',",
+						"'DotNet Memcached connection',",
+						"'DotNet Memcached Data',",
+						"'DotNet Unknown Memcached Data',",
+						"'DotNet Unknown Memcached connection',",
+						"'DotNet Elasticsearch Artifacts',",
+						"'DotNet Elasticsearch Cluster',",
+						"'DotNet Elasticsearch Index',",
+						"'DotNet Unknown Elasticsearch Index',",
+						"'DotNet Redis Artifacts',",
+						"'DotNet Redis connection',",
+						"'DotNet Redis collection',",
+						"'DotNet Unknown Redis collection',",
+						"'DotNet Unknown Redis connection',",
+						"'NodeJS MongoDB connection',",
+						"'NodeJS MongoDB collection',",
+						"'NodeJS Unknown MongoDB connection',",
+						"'NodeJS Unknown MongoDB collection',",
+						"'NodeJS DynamoDB Table',",
+						"'NodeJS DynamoDB Endpoint',",
+						"'NodeJS Memcached Value',",
+						"'NodeJS Memcached connection',",
+						"'NodeJS CosmosDB database',",
+						"'NodeJS CosmosDB collection',",
+						"'NodeJS CosmosDB Client',",
+						"'NodeJS CosmosDB Unknown database',",
+						"'NodeJS CosmosDB Unknown collection',",
+						"'NodeJS CosmosDB Unknown Client',",
+						"'NodeJS Marklogic database',",
+						"'NodeJS Marklogic collection',",
+						"'NodeJS CouchDB database',",
+						"'NodeJS unknown database Table',",
+						"'NodeJS Redis connection',",
+						"'NodeJS Redis collection',",
+						"'NodeJS Unknown Redis connection',",
+						"'NodeJS Unknown Redis collection',",
+						"'NodeJS Elasticsearch Cluster',",
+						"'NodeJS Elasticsearch Unknown Cluster',",
+						"'NodeJS Elasticsearch Index',",
+						"'NodeJS Elasticsearch Unknown Index'))  ",
+					"group by Source_repo_name order by 1"
+                ]
+            }
+        ]
+    },
+    {
+        "report": "{config.aip_name}_Project_Information",
+        "ouputFolder" : "Postgres",
+        "tabs": [
+            {
+                "queryName": "ASP",
+            	"queryType" : "css",
+                "query": [
+                    "select object_name as \"Project Name\", rootpath as \"Project Reference\" from {config.aip_triplet_prefix}_mngt.cms_asp_project"
+                ]
+            },
+            {
+                "queryName": "Assembly",
+            	"queryType" : "css",
+                "query": [
+                    "select assemblypath as \"Assembly Name\" from {config.aip_triplet_prefix}_mngt.cms_net_assembly_file"
+                ],
+                "formating": {
+                    "Assembly Name": {
+                        "width": 200
+                    }
+                }
+            },
+            {
+                "queryName": "C++",
+            	"queryType" : "css",
+                "query": [
+                    "select object_name as \"Project Name\", rootpath as \"Project Reference\" from {config.aip_triplet_prefix}_mngt.cms_cpp_project"
+                ]
+            },
+            {
+                "queryName": "Java",
+            	"queryType" : "css",
+                "query": [
+                	"select object_name as \"Project Name\", rootpath as \"Project Reference\", codesize as \"Code Size\",",
+			            "apppath as \"Application Path\", web_descriptor as \"Web Descriptor\", java_version as \"Java Version\",",
+			            "hibernate_usage as \"Hibernate Usage\", struts_usage as \"Struts Usage\", spring_usage as \"Spring Usage\",",
+			            "jsf_usage as \"JSF Usage\", ejb_usage as \"EJB Usage\", wbs_usage as \"WBS Usage\"",
+			        "from {config.aip_triplet_prefix}_mngt.cms_j2ee_project"
+                ]
+            },
+            {
+                "queryName": ".Net",
+            	"queryType" : "css",
+                "query": [
+                    "select", 
+			            "object_name as \"Project Name\", rootpath as \"Project Reference\", codesize as \"Code Size\",",
+			            "frameworkversion as \"Version\", assemblyname as \"Assembly Name\", defaultnamespace as \"Default Namespace\"",
+			        "from {config.aip_triplet_prefix}_mngt.cms_net_project"
+                ]
+            },
+            {
+                "queryName": "VB",
+            	"queryType" : "css",
+                "query": [
+                	"select object_name as \"Project Name\", rootpath as \"Project Reference\", codesize as \"Code Size\"",
+                	"from {config.aip_triplet_prefix}_mngt.cms_vb_project"
+                ]
+            }
+        ]
+    },
+    {
+        "report": "{config.aip_name}_Repository_Technology",
+        "ouputFolder" : "Postgres",
+        "tabs": [
+            {
+                "queryName": "Results",
+            	"queryType" : "css",
+                "query": [
+                    "select ",
+						"substring(path,'.*\\\\Analyzed\\\\(.*?)\\\\.*') as \"Repository Names\", ",
+						"replace(string_agg(distinct object_language_name,';'),';<N/A>','') Languages, ",
+						"string_agg(distinct object_type_Str,';') as \"Object Types\"",
+					"from {config.aip_triplet_prefix}_local.refpath t1, {config.aip_triplet_prefix}_local.objfilref t2, {config.aip_triplet_prefix}_local.cdt_objects t3",
+					"where t1.idfilref = t2.idfilref",
+						"and t2.idobj = t3.object_id",
+						"and object_type_Str not in ('File which contains source code')",
+						"and substring(path,'.*\\\\Analyzed\\\\(.*?)\\\\.*') not in ('') ",
+					"group by \"Repository Names\" order by 1"
+                ],
+                "formating": {
+                    "Repository Names": {
+                        "width": 30
+                    },
+                    "Languages": {
+                        "width": 40
+                    },
+                    "Object Types": {
+                        "width": 200
+                    }
+                }
+            }
+        ]
+    },
+    {
+        "report": "{config.aip_name}_Technology_LOC",
+        "ouputFolder" : "Postgres",
+        "tabs": [
+            {
+                "queryName": "Technology_LOC",
+            	"queryType" : "css",
+                "query": [
+                    "Select Languages , SUM(LOC) from ((select  ",
+						"t3.object_language_name Languages ,SUM(t4.InfVal)  LOC ",
+					"from {config.aip_triplet_prefix}_local.cdt_objects t3, {config.aip_triplet_prefix}_local.objfilref t2, {config.aip_triplet_prefix}_local.refpath t1 , {config.aip_triplet_prefix}_local.ObjInf t4  ",
+					"where t3.object_id = t4.IdObj and t4.InfTyp = 1 and  t4.InfSubTyp = 0 and  t2.idobj = t3.object_id and t1.idfilref = t2.idfilref ",
+						"and t3.object_language_name not ",
+						"like '%%N/A%%' and t3.object_language_name not like '%%Universal Analyzer Language%%' and t3.object_language_name not like 'COM' and ",
+						" t3.object_language_name not like '.NET' and object_type_Str not in ('File which contains source code')",
+					"group by Languages order by 1 )",
+					"UNION  ALL  ",
+					"(select  distinct ",
+						"t3.object_language_name Languages , 0 LOC ",
+					"from {config.aip_triplet_prefix}_local.cdt_objects t3   ",
+					"where t3.object_language_name not ",
+						"like '%%N/A%%' and t3.object_language_name not like '%%Universal Analyzer Language%%' and t3.object_language_name not like 'COM' and ",
+						" t3.object_language_name not like '.NET' and object_type_Str not in ('File which contains source code') order by 1 ))temp group by Languages order by 1"
+                ]
+            },
+            {
+                "queryName": "Repository_Techno_LOC",
+            	"queryType" : "css",
+                "query": [
+                   "select distinct",
+						"substring(path,'.*\\\\Analyzed\\\\(.*?)\\\\.*') repo_name, ",
+						"object_language_name Languages, SUM(t4.InfVal)  LOC",
+					"from {config.aip_triplet_prefix}_local.refpath t1, {config.aip_triplet_prefix}_local.objfilref t2, {config.aip_triplet_prefix}_local.cdt_objects t3, {config.aip_triplet_prefix}_local.ObjInf t4 ",
+					"where t1.idfilref = t2.idfilref",
+						"and t2.idobj = t3.object_id ",
+						"and t3.object_id = t4.IdObj  ",
+						"and t4.InfTyp = 1 and  t4.InfSubTyp = 0",
+						"and object_type_Str not in ('File which contains source code') and substring(path,'.*\\\\Analyzed\\\\(.*?)\\\\.*') not in ('',NULL) ",
+						" and substring(path,'.*\\\\Analyzed\\\\(.*?)\\\\.*') not in ('') ",
+					"group by repo_name,Languages order by 1"
+                ]
+            }
+        ]
+    },
+    {
+        "report": "{config.aip_name}_Complex_Objects",
+        "ouputFolder" : "Cypher",
+        "tabs": [
+            {
+                "queryName": "CC - Objects",
+            	"queryType" : "cypher",
                 "query": [
                     "MATCH (o:Object:{config.aip_name})-[r]->(p:ObjectProperty)",
                     "WHERE p.Description CONTAINS 'Cyclomatic Complexity'",
@@ -41,7 +355,8 @@
                 }
             },
             {
-                "name": "CC - Sub objects",
+                "queryName": "CC - Sub objects",
+            	"queryType" : "cypher",
                 "query": [
                     "MATCH (o:SubObject:{config.aip_name})-[r]->(p:ObjectProperty)",
                     "WHERE p.Description CONTAINS 'Cyclomatic Complexity'",
@@ -81,10 +396,12 @@
         ]
     },
     {
-        "report": "DeadCode",
+        "report": "{config.aip_name}_Dead_Code",
+        "ouputFolder" : "Cypher",
         "tabs": [
             {
-                "name": "DeadCode",
+                "queryName": "DeadCode",
+            	"queryType" : "cypher",
                 "query": [
                     "MATCH (o:Object:`{config.aip_name}`) WHERE Not (o)-[]-(:Object) ",
                     "with o ",
@@ -116,10 +433,12 @@
         ]
     },
     {
-        "report": "API details",
+        "report": "{config.aip_name}_API",
+        "ouputFolder" : "Cypher",
         "tabs": [
             {
-                "name": "Sheet 1",
+                "queryName": "API",
+            	"queryType" : "cypher",
                 "query": [
                     "MATCH (m:Module:{config.aip_name})-[:Contains]->(o1:Object)-[]-(o2:Object)<-[]-(l:Level5) ",
                     "WHERE l.Name CONTAINS 'API' ",
@@ -133,9 +452,16 @@
                         "width": 20
                     }
                 }
-            },
+            }
+        ]
+    },
+    {
+        "report": "{config.aip_name}_API_Name",
+        "ouputFolder" : "Cypher",
+        "tabs": [
             {
-                "name": "Sheet 2",
+                "queryName": "API Name",
+            	"queryType" : "cypher",
                 "query": [
                     "MATCH (m:Module:{config.aip_name})-[:Contains]->(o1:Object)-[]-(o2:Object)<-[]-(l:Level5) ",
                     "WHERE l.Name CONTAINS 'API' ",
@@ -148,4 +474,360 @@
                 }
             }
         ]
-    }]
+    },
+    {
+        "report": "{config.aip_name}_ShellProgram",
+        "ouputFolder" : "Cypher",
+        "tabs": [
+            {
+                "queryName": "ShellProgram",
+            	"queryType" : "cypher",
+                "query": [
+                    "MATCH (o:Object: {config.aip_name})",
+                    "WHERE o.Type = 'SHELL Program'",
+                    "RETURN distinct o.Name as `ObjectName`,o.FullName as `ObjectFullName`,o.Type,SPLIT(o.FullName,'\\\\')[5] as `RepositoryName`"
+                ],
+                "formating": {
+                    "ObjectName": {
+                        "width": 20
+                    },
+                    "ObjectFullName": {
+                        "width": 20
+                    },
+                    "RepositoryName": {
+                        "width": 20
+                    },
+                    "o.Type": {
+                        "width": 20
+                    }
+                }
+            }
+        ]
+    },
+    {
+        "report": "{config.aip_name}_MainCallingShellProgram",
+        "ouputFolder" : "Cypher",
+        "tabs": [
+            {
+                "queryName": "MainCallingShellProgram",
+            	"queryType" : "cypher",
+                "query": [
+                    "MATCH (caller:Object:{config.aip_name})-[:CALL]->(callee:Object:ATCS)",
+					"WHERE caller.Type='SHELL Program' ",
+					"AND NOT (()-[:CALL]->(caller)) ",
+					"RETURN caller.Name,caller.FullName,caller.Type,SPLIT(caller.FullName,'\\\\')[5] as CallerRepositoryName ,callee.Name,callee.FullName,callee.Type,SPLIT(callee.FullName,'\\\\')[5] as CalleeRepositoryName "
+                ],
+                "formating": {
+                    "caller.Name": {
+                        "width": 20
+                    },
+                    "caller.FullName": {
+                        "width": 20
+                    },
+                    "caller.Type": {
+                        "width": 20
+                    },
+                    "CallerRepositoryName": {
+                        "width": 20
+                    },
+                    "callee.Name": {
+                        "width": 20
+                    },
+                    "callee.FullName": {
+                        "width": 20
+                    },
+                    "callee.Type": {
+                        "width": 20
+                    },
+                    "CalleeRepositoryName": {
+                        "width": 20
+                    }
+                }
+            }
+        ]
+    },
+    {
+        "report": "{config.aip_name}_C++Repo",
+        "ouputFolder" : "Cypher",
+        "tabs": [
+            {
+                "queryName": "C++ Repo",
+            	"queryType" : "cypher",
+                "query": [
+                    "MATCH (o:Object:{config.aip_name}) ",
+					"WHERE o.Type='C/C++ File' ",
+					"Optional MATCH (o)-[r1]->(p2:ObjectProperty) WHERE p2.Description='File' ",
+					"with o,r1.value as Path  ",
+					"return distinct o.Name,o.FullName,o.Type,SPLIT(Path,'\\\\')[5] as RepositoryName"
+                ],
+                "formating": {
+                    "o.Name": {
+                        "width": 20
+                    },
+                    "o.FullName": {
+                        "width": 20
+                    },
+                    "o.Type": {
+                        "width": 20
+                    },
+                    "RepositoryName": {
+                        "width": 20
+                    }
+                }
+            }
+        ]
+    },
+    {
+        "report": "{config.aip_name}_CloudReady",
+        "ouputFolder" : "Cypher",
+        "tabs": [
+            {
+                "queryName": "Cloud Ready",
+            	"queryType" : "cypher",
+                "query": [
+                    "MATCH (h:HighlightProperty)",
+					"MATCH(o:{config.aip_name})-[r:Property]->(op:ObjectProperty)",
+					"WHERE op.Id STARTS WITH h.AipId",
+					"AND op.Id ENDS WITH 'CloudReady' ",
+					"with o,r.value AS Value,op.Description AS Description,op.Doc as Doc_link,op.Tags as Tags ",
+					"Optional MATCH (o)-[r1]->(p2:ObjectProperty) WHERE p2.Description='File' ",
+					"with o,r1.value as Path  ,Value,Description,Doc_link, Tags",
+					"RETURN o.FullName AS ObjectFullname,o.Type as ObjectType,  Value as CodeLine, Description, Doc_link, Tags,SPLIT(Path,'\\\\')[5] as RepositoryName ,    Path  "
+                ],
+                "formating": {
+                    "ObjectFullname": {
+                        "width": 20
+                    },
+                    "ObjectType": {
+                        "width": 20
+                    },
+                    "CodeLine": {
+                        "width": 20
+                    },
+                    "Description": {
+                        "width": 20
+                    },
+                    "Doc_link": {
+                        "width": 20
+                    },
+                    "Tags": {
+                        "width": 20
+                    },
+                    "RepositoryName": {
+                        "width": 20
+                    },
+                    "Path": {
+                        "width": 20
+                    }
+                }
+            }
+        ]
+    },
+    {
+        "report": "{config.aip_name}_Containerization",
+        "ouputFolder" : "Cypher",
+        "tabs": [
+            {
+                "queryName": "Containerization",
+            	"queryType" : "cypher",
+                "query": [
+                    "MATCH (h:HighlightProperty)",
+					"MATCH(o:{config.aip_name})-[r:Property]->(op:ObjectProperty)",
+					"WHERE op.Id STARTS WITH h.AipId",
+					"AND op.Id ENDS WITH 'Container' ",
+					"with o,r.value AS Value,op.Description AS Description,op.Doc as Doc_link,op.Tags as Tags ",
+					"Optional MATCH (o)-[r1]->(p2:ObjectProperty) WHERE p2.Description='File' ",
+					"with o,r1.value as Path  ,Value,Description,Doc_link, Tags",
+					"RETURN o.FullName AS ObjectFullname,o.Type as ObjectType,  Value as CodeLine, Description, Doc_link, Tags,SPLIT(Path,'\\\\')[5] as RepositoryName, Path"          
+				],
+                "formating": {
+                    "ObjectFullname": {
+                        "width": 20
+                    },
+                    "ObjectType": {
+                        "width": 20
+                    },
+                    "CodeLine": {
+                        "width": 20
+                    },
+                    "Description": {
+                        "width": 20
+                    },
+                    "Doc_link": {
+                        "width": 20
+                    },
+                    "Tags": {
+                        "width": 20
+                    },
+                    "RepositoryName": {
+                        "width": 20
+                    },
+                    "Path": {
+                        "width": 20
+                    }
+                }
+            }
+        ]
+    },
+    {
+        "report": "{config.aip_name}_Object_LOC",
+        "ouputFolder" : "Cypher",
+        "tabs": [
+            {
+                "queryName": "Object_LOC",
+            	"queryType" : "cypher",
+                "query": [
+                    "MATCH (o:Object:{config.aip_name})-[r]->(p:ObjectProperty) WHERE p.Description CONTAINS 'Number of code lines'",
+					"WITH o,r.value as `Numberofcodelines` ",
+					"Optional MATCH (o)-[r1]->(p2:ObjectProperty) WHERE p2.Description='File' ",
+					"With o, Numberofcodelines,r1.value as Path  ",
+					"RETURN DISTINCT o.Type as `Object Type`, o.FullName as `Object Fullname`, o.Name as `Object Name`,Numberofcodelines,SPLIT(Path,'\\\\')[5] as RepositoryName ,Path;"
+                ],
+                "formating": {
+                    "Object Type": {
+                        "width": 20
+                    },
+                    "Object Fullname": {
+                        "width": 20
+                    },
+                    "Object Name": {
+                        "width": 20
+                    },
+                    "Numberofcodelines": {
+                        "width": 20
+                    },
+                    "RepositoryName": {
+                        "width": 20
+                    },
+                    "Path": {
+                        "width": 20
+                    }
+                }
+            }
+        ]
+    },
+    {
+        "report": "{config.aip_name}_ObjectCount",
+        "ouputFolder" : "Cypher",
+        "tabs": [
+            {
+                "queryName": "ObjectCount",
+            	"queryType" : "cypher",
+                "query": [
+                    "MATCH (o:Object:{config.aip_name})",
+					"RETURN DISTINCT o.Type as `Type`,COUNT(DISTINCT o.AipId) as `Total`",  
+					"ORDER BY COUNT(DISTINCT o.AipId) DESC"
+                ],
+                "formating": {
+                    "Type": {
+                        "width": 20
+                    },
+                    "Total": {
+                        "width": 20
+                    }
+                }
+            }
+        ]
+    },
+    {
+        "report": "{config.aip_name}_Object_LOC_Summary",
+        "ouputFolder" : "Cypher",
+        "tabs": [
+            {
+                "queryName": "Object_LOC_Summary",
+            	"queryType" : "cypher",
+                "query": [
+                    "MATCH (o:Object:{config.aip_name})",
+					"WITH  o ",
+					"OPTIONAL MATCH (o)-[r]->(obp:ObjectProperty) WHERE obp.Description='SNumber of code lines'",
+					"RETURN DISTINCT o.Type as `Type`, COUNT(DISTINCT o.AipId) as `count_obj`, SUM(toInteger(r.value)) as tot_loc"
+                ],
+                "formating": {
+                    "Type": {
+                        "width": 20
+                    },
+                    "count_obj": {
+                        "width": 20
+                    },
+                    "tot_loc": {
+                        "width": 20
+                    }
+                }
+            }
+        ]
+    },
+    {
+        "report": "{config.aip_name}_DB_HasReferences",
+        "ouputFolder" : "Cypher",
+        "tabs": [
+            {
+                "queryName": "SQL Tables",
+            	"queryType" : "cypher",
+                "query": [
+					"MATCH (caller:Object:{config.aip_name})-[r1]->(callee:Object:{config.aip_name})",
+					"WHERE callee.Type contains 'Table'",
+					"and not(caller.Type contains 'Procedure') and not(caller.Type contains 'function') and not(caller.Type contains 'trigger')",
+					"and not(caller.Type contains 'Table') and not(caller.Type contains 'View') and not(caller.Type contains 'Script')",
+					"return DISTINCT callee.FullName "
+                ],
+                "formating": {
+                    "callee.FullName": {
+                        "width": 40
+                    }
+                }
+            },
+            {
+                "queryName": "SQL Stored Procedures",
+            	"queryType" : "cypher",
+                "query": [
+					"MATCH (caller:Object:{config.aip_name})-[r1]->(callee:Object:{config.aip_name})",
+					"WHERE callee.Type contains 'Procedure'",
+					"and not(caller.Type contains 'Procedure') and not(caller.Type contains 'function') and not(caller.Type contains 'trigger')",
+					"and not(caller.Type contains 'Table') and not(caller.Type contains 'View') and not(caller.Type contains 'Script')",
+					"return DISTINCT callee.FullName "
+                ],
+                "formating": {
+                    "callee.FullName": {
+                        "width": 40
+                    }
+                }
+            },
+            {
+                "queryName": "SQL Views",
+            	"queryType" : "cypher",
+                "query": [
+					"MATCH (caller:Object:{config.aip_name})-[r1]->(callee:Object:{config.aip_name})",
+					"WHERE callee.Type contains 'View'",
+					"and not(caller.Type contains 'Procedure') and not(caller.Type contains 'function') and not(caller.Type contains 'trigger')",
+					"and not(caller.Type contains 'Table') and not(caller.Type contains 'View') and not(caller.Type contains 'Script')",
+					"return DISTINCT callee.FullName "
+                ],
+                "formating": {
+                    "callee.FullName": {
+                        "width": 40
+                    }
+                }
+            }
+        ]
+    },
+    {
+        "report": "{config.aip_name}_DB_NoCallers",
+        "ouputFolder" : "Cypher",
+        "tabs": [
+            {
+                "queryName": "DB_NoCallers",
+            	"queryType" : "cypher",
+                "query": [
+                    "MATCH (o:Object:{config.aip_name})",
+					"WHERE o.Type contains 'Procedure' AND NOT (:Object)-[]->(o)",
+					"return DISTINCT o.FullName"
+                ],
+                "formating": {
+                    "o.FullName": {
+                        "width": 40
+                    }
+                }
+            }
+        ]
+    }
+]

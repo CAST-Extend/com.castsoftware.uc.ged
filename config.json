@@ -2,22 +2,23 @@
   "report_path" : "C:/temp",
   
   "AIP":{
-    "name":"Apteryx",
-    "triplet_prefix":"atcs",
-    "url":"http://localhost:8080/rest/",
-    "user":"cast",
-    "password":"cast"
+    "name" : "ATCS",
+    "triplet_prefix": "atcs",
+    "url" : "http://localhost:8080/rest/",
+    "user" : "cast",
+    "password" : "cast"
   },
 
   "NEO4J": {
-	"active": true,
-    "host" : "sha-dd-imaging",
+	"active" : true,
+    "host" : "localhost",
     "port" : "7687",
     "user" : "neo4j",
     "password" : "imaging"
   },
 
   "CSS":{
+  	"active" : true,
     "host" : "localhost",
     "port" : "2284",
     "user" : "operator",
@@ -31,11 +32,17 @@
   },
   
   "HIGHLIGHT":{
-  	"active": false,
+  	"active" : false,
     "application_name" : "ATCS",
-    "domain_id" : "11111",
+    "domain_id" : "00000",
     "url" : "https://rpa.casthighlight.com/WS2",
-    "user" : "name@domain.com",
+    "user" : "user@domain.com",
     "password" : "password"
+  },
+  
+  "LOCAL_BOM_REPORT":{ 
+  	"active" : true,
+  	"report_path" : "C:/Users/hlr/Desktop/ATT/Project_BOM/Inputs/ATCS_BOM.xlsx"
   }
+  
 }

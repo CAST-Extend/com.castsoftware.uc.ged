@@ -8,58 +8,50 @@ from aipCSS import CssConnection
 from aipRest import AipRestCall
 from imagingRestCall import ImagingApi
 from hlRest import HighlightRestCall
+from queryEngine import QueryEngine
+from logging import INFO
 
 if __name__ == '__main__':
     
     print('\nAutomated Reports Tool')
     print('Copyright (c) 2022 CAST Software Inc.\n')
     
-    parser = argparse.ArgumentParser(description='AT&T - SDS - Modernization - Report Generation Tool')
-    parser.add_argument('-c','--config', required=True, help='Configuration properties file')
+    parser = argparse.ArgumentParser(description='Report Generation Tool')
+    parser.add_argument('-c','--config', required=True, help='Configuration JSON file')
+    parser.add_argument('-q','--query', required=True, help='Cypher and CSS queries JSON file')
     args = parser.parse_args()
     c = Config(args.config)
-
+    
+    connNeo4j = None
+    connCSS = None
+    connHL = None
+    connAipRest = None
+    connImagingRest = None
+    
     try:
-        # Cypher reports
-        if c.NEO4J:
-            connNeo4j = Neo4jConnection(c.neo4j_host, c.neo4j_port, c.neo4j_user, c.neo4j_password)
-            cypherDir = c.report_path + '/Cypher'
-            if not os.path.exists(cypherDir):
-                os.makedirs(cypherDir)
+        if c.NEO4J and c.CSS:
             
-            reports.ApiRepository(c.aip_name, cypherDir, connNeo4j)
-            reports.ApiName(c.aip_name, cypherDir, connNeo4j)
-            reports.CloudReady(c.aip_name, cypherDir, connNeo4j)
-            reports.ComplexObjects(c.aip_name, cypherDir, connNeo4j)
-            reports.Containerization(c.aip_name, cypherDir, connNeo4j)
-            reports.CppRepo(c.aip_name, cypherDir, connNeo4j)
-            reports.DeadCode(c.aip_name, cypherDir, connNeo4j)
-            reports.MainCallingShellProgram(c.aip_name, cypherDir, connNeo4j)
-            reports.ObjectLOC(c.aip_name, cypherDir, connNeo4j)
-            reports.ShellProgram(c.aip_name, cypherDir, connNeo4j)
-       
-        # Postgres reports
-        if c.CSS:
-            connCSS = CssConnection(c.css_host, c.css_port, c.css_user, c.css_password)
-            postgresDir = c.report_path + '/Postgres'
-            if not os.path.exists(postgresDir):
-                os.makedirs(postgresDir)
-            reports.ASPProjectInformation(c.aip_name, c.aip_triplet_prefix, postgresDir, connCSS)
-            reports.AssemblyInformation(c.aip_name, c.aip_triplet_prefix, postgresDir, connCSS)
-            reports.CppProjectInformation(c.aip_name, c.aip_triplet_prefix, postgresDir, connCSS)
-            reports.NetProjectInformation(c.aip_name, c.aip_triplet_prefix, postgresDir, connCSS)
-            reports.JavaProjectInformation(c.aip_name, c.aip_triplet_prefix, postgresDir, connCSS)
-            reports.Repository_Technology(c.aip_name, c.aip_triplet_prefix, postgresDir, connCSS)
-            reports.Technology_LOC(c.aip_name, c.aip_triplet_prefix, postgresDir, connCSS)
-           
-        # Project BOM report
-        if c.NEO4J and c.CSS and c.HIGHLIGHT:
-            connHL = HighlightRestCall(c.hl_url, c.hl_user, c.hl_password)
+            # Cypher and Postgres reports
+            queryEng = QueryEngine(c, args.query, log_level=INFO)
+            queryEng.run()
+            
+            # Project BOM report
             projectBomDir = c.report_path + '/Project_BOM'
+            summaryInfoDir = c.report_path + '/Summary_Information'
+            
             if not os.path.exists(projectBomDir):
                 os.makedirs(projectBomDir)
+            if not os.path.exists(summaryInfoDir):
+                os.makedirs(summaryInfoDir)
             
-            reports.ProjectBOM(c.hl_domain_id, c.hl_application_name, projectBomDir, connHL, c.aip_name, c.aip_triplet_prefix, connCSS)
+            connNeo4j = Neo4jConnection(c.neo4j_host, c.neo4j_port, c.neo4j_user, c.neo4j_password)
+            connCSS = CssConnection(c.css_host, c.css_port, c.css_user, c.css_password)
+            
+            if c.HIGHLIGHT:
+                connHL = HighlightRestCall(c.hl_url, c.hl_user, c.hl_password)
+                reports.ProjectBOMfromHighLight(c.hl_domain_id, c.hl_application_name, projectBomDir, connHL, c.aip_name, c.aip_triplet_prefix, connCSS, connNeo4j)
+            elif c.LOCAL_BOM_REPORT:             
+                reports.ProjectBOMfromLocalFile(c.bom_path, projectBomDir, c.aip_name, c.aip_triplet_prefix, connCSS, connNeo4j)
         
         # Engineering Dashboard reports
         if c.AIP:
@@ -77,7 +69,6 @@ if __name__ == '__main__':
             imagingDir = c.report_path + '/Imaging_Reports'
             if not os.path.exists(imagingDir):
                     os.makedirs(imagingDir)
-            
             reports.DBObjects(c.aip_name, imagingDir, connImagingRest)
             reports.APIInteractions(c.aip_name, imagingDir, connImagingRest)
             '''
@@ -98,12 +89,14 @@ if __name__ == '__main__':
                 'Most Referenced Objects',
                 "Modules' Complexity",
             ]
-            numberOfRetries = 10
-            timeBetweenRetries = 5 
+            numberOfRetries = 30
+            timeBetweenRetries = 10
             reports.GenerateImagingReportsAsync(c.aip_name, imagingDir, standardReportsList, connImagingRest, numberOfRetries, timeBetweenRetries)
-
+            
     finally:
-        connNeo4j.close()
-        connCSS.disposeEngine()
+        if connNeo4j is not None:
+            connNeo4j.close()
+        if connCSS is not None:
+            connCSS.disposeEngine()
         
     print('\nAutomated Reports Generation Finished')
