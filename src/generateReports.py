@@ -1,8 +1,7 @@
 import reports
 import argparse
 import os
-''' test lks
-'''
+
 from config import Config
 from imagingNeo4j import Neo4jConnection
 from aipCSS import CssConnection
@@ -30,23 +29,23 @@ if __name__ == '__main__':
     connImagingRest = None
     
     try:
-        # Cypher and Postgres reports
         if c.NEO4J and c.CSS:
+            
+            # Cypher and Postgres reports
             queryEng = QueryEngine(c, args.query, log_level=INFO)
             queryEng.run()
             
-        # Project BOM and Summary Information reports
-        if c.NEO4J and c.CSS:
+            # Project BOM report
             projectBomDir = c.report_path + '/Project_BOM'
             summaryInfoDir = c.report_path + '/Summary_Information'
-            
-            connNeo4j = Neo4jConnection(c.neo4j_host, c.neo4j_port, c.neo4j_user, c.neo4j_password)
-            connCSS = CssConnection(c.css_host, c.css_port, c.css_user, c.css_password)
             
             if not os.path.exists(projectBomDir):
                 os.makedirs(projectBomDir)
             if not os.path.exists(summaryInfoDir):
                 os.makedirs(summaryInfoDir)
+            
+            connNeo4j = Neo4jConnection(c.neo4j_host, c.neo4j_port, c.neo4j_user, c.neo4j_password)
+            connCSS = CssConnection(c.css_host, c.css_port, c.css_user, c.css_password)
             
             if c.HIGHLIGHT:
                 connHL = HighlightRestCall(c.hl_url, c.hl_user, c.hl_password)
