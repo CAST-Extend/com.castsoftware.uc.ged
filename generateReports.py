@@ -8,7 +8,7 @@ from aipCSS import CssConnection
 from aipRest import AipRestCall
 from imagingRestCall import ImagingApi
 from hlRest import HighlightRestCall
-from cypher import Cypher
+from queryEngine import QueryEngine
 from logging import INFO
 
 if __name__ == '__main__':
@@ -16,7 +16,7 @@ if __name__ == '__main__':
     print('\nAutomated Reports Tool')
     print('Copyright (c) 2022 CAST Software Inc.\n')
     
-    parser = argparse.ArgumentParser(description='AT&T - SDS - Modernization - Report Generation Tool')
+    parser = argparse.ArgumentParser(description='Cypher and Postgres Report Generation Tool')
     parser.add_argument('-c','--config', required=True, help='Configuration properties file')
     args = parser.parse_args()
     c = Config(args.config)
@@ -30,7 +30,7 @@ if __name__ == '__main__':
     try:
         # Cypher reports
         if c.NEO4J:
-            cypher = Cypher(c, log_level=INFO)
+            cypher = QueryEngine(c, log_level=INFO)
             cypher.run()
             cypher.updateQueryFile()
             '''

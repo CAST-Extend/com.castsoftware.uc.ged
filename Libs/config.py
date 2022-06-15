@@ -8,7 +8,6 @@ from json import JSONDecodeError
 
 from sqlalchemy import true
 
-
 __author__ = "Nevin Kaplan"
 __copyright__ = "Copyright 2022, CAST Software"
 __email__ = "n.kaplan@castsoftware.com"
@@ -64,13 +63,11 @@ class Config(Logger):
         except JSONDecodeError as e:
             msg = str(e)
             self.error('Configuration file must be in a JSON format')
-            print(msg)
             exit()
 
         except ValueError as e:
             msg = str(e)
             self.error(msg)
-            print(msg)
             exit()
 
     @property
