@@ -15,7 +15,7 @@ class ImagingApi(ImagingRestCall):
         (status, json) = self.post(url)
         report_uuid = ''
         if status == codes['ok']:
-            self.info('Report generation requested for report {0}. Code: {1}. Body: {2}'.format(report_id,status,json))
+            self.info('Report generation requested for report {0}'.format(report_id,status,json))
             report_uuid = json['success']['uuid']
         else:
             self.error('Error requesting generation of report {0}. Code: {1}. Body: {2}'.format(report_id,status,json))

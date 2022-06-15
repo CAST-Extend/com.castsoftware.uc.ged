@@ -4,7 +4,8 @@ Created on 24 may 2022
 @author: HLR
 '''
 
-from neo4j import GraphDatabase
+from neo4j import GraphDatabase 
+from neo4j.exceptions import ServiceUnavailable
 from pandas import DataFrame,json_normalize
 from logger import Logger
 from logging import WARN,INFO,DEBUG
@@ -38,11 +39,15 @@ class Neo4jConnection(object):
         return response
     
     def dfquery(self, sentence):
+        df = DataFrame()
         try: 
             df = DataFrame([dict(_) for _ in self.query(sentence)])
             if df.empty:
                 self.__log.warning("Query ran successfuly but return no results")
-            return df
+        except ServiceUnavailable as e:
+            self.__log.error(f'Connection Error: {e}')
+            quit()
         except Exception as e:
             self.__log.error(f"Query failed: {e.message}")
-            return DataFrame()
+
+        return df
