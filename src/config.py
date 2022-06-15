@@ -25,7 +25,7 @@ class Config(Logger):
             # AIP must always be active
             self.__config['AIP']['active']=True
 
-            for v in ['report_path','AIP','NEO4J','CSS','IMAGING','HIGHLIGHT']:
+            for v in ['report_path','AIP','NEO4J','CSS','IMAGING','HIGHLIGHT','LOCAL_BOM_REPORT']:
                 if v not in self.__config or len(self.__config[v]) == 0:
                     raise ValueError(f"Required field '{v}' is missing from config.json")
 
@@ -51,6 +51,11 @@ class Config(Logger):
                                 break
                     elif v in ['HIGHLIGHT']:
                         for p in ["application_name","domain_id","url","user","password"]:
+                            if p not in json or len(p) == 0:
+                                valid=False
+                                break
+                    elif v in ['LOCAL_BOM_REPORT']:
+                        for p in ["report_path"]:
                             if p not in json or len(p) == 0:
                                 valid=False
                                 break
@@ -89,6 +94,10 @@ class Config(Logger):
     @property
     def HIGHLIGHT(self):
         return self.__config['HIGHLIGHT']['active']
+    
+    @property
+    def LOCAL_BOM_REPORT(self):
+        return self.__config['LOCAL_BOM_REPORT']['active']
 
     @property
     def report_path(self):
@@ -173,4 +182,8 @@ class Config(Logger):
     @property
     def hl_password(self):
         return self.__config['HIGHLIGHT']['password']
+    
+    @property
+    def bom_path(self):
+        return self.__config['LOCAL_BOM_REPORT']['report_path']
 

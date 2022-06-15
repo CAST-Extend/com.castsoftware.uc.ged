@@ -21,7 +21,7 @@ __credits__ = ["Nevin Kaplan","Héctor Luis Rodriguez" ]
 __email__ = "n.kaplan@castsoftware.com"
 
 class QueryEngine():
-    def __init__(self, config, log_level=INFO):
+    def __init__(self, config, queryFile, log_level=INFO):
         self.log = Logger(level=log_level)
         self.log.debug("NEO4J Cypher is active, generating reports")
         self.__config=config
@@ -30,7 +30,7 @@ class QueryEngine():
         self.connCSS = CssConnection(config.css_host, config.css_port, config.css_user, config.css_password)
 
         try:
-            with open("query.json", 'rb') as query_file:
+            with open(queryFile, 'rb') as query_file:
                 self.__data = load(query_file)
             
             self.__query_modified = False
@@ -63,9 +63,8 @@ class QueryEngine():
             writer = ExcelWriter(filename, engine='xlsxwriter')
 
             tab_df=[]
+            any_tabs = False
             for tab in rpt['tabs']:
-                any_tabs = False
-
                 if 'queryName' not in tab:
                     self.log.error(f'Missing queryName for {filename}')
                     continue
@@ -96,12 +95,15 @@ class QueryEngine():
                     if not 'formating' in tab:
                         tab['formating'] = {}
                     self._add_tab(writer,df,tab_name,tab['formating'])
+                else: self.log.warning('No results available') 
 
             if any_tabs:
                 writer.save()
+                self.log.info(f'Successfully generated {filename}')
             else:
                 writer.close()
                 os.remove(filename)
+                self.log.warning(f'No data for report generation')
     
     def _add_tab(self,writer,data,name,formatting):
         data.to_excel(writer, index=False, sheet_name=name, startrow=1,header=False)

@@ -34,10 +34,10 @@
   "HIGHLIGHT":{
   	"active" : false,
     "application_name" : "ATCS",
-    "domain_id" : "10231",
+    "domain_id" : "00000",
     "url" : "https://rpa.casthighlight.com/WS2",
-    "user" : "l.s+ATT@castsoftware.com",
-    "password" : "Lakshmiatt123#"
+    "user" : "user@domain.com",
+    "password" : "password"
   },
   
   "LOCAL_BOM_REPORT":{ 
