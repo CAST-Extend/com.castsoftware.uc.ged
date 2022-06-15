@@ -94,7 +94,9 @@ if __name__ == '__main__':
             reports.GenerateImagingReportsAsync(c.aip_name, imagingDir, standardReportsList, connImagingRest, numberOfRetries, timeBetweenRetries)
             
     finally:
-        connNeo4j.close()
-        connCSS.disposeEngine()
+        if connNeo4j is not None:
+            connNeo4j.close()
+        if connCSS is not None:
+            connCSS.disposeEngine()
         
     print('\nAutomated Reports Generation Finished')

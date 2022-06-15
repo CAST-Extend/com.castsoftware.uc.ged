@@ -1,8 +1,9 @@
 '''
-Created on 24 may 2022
-
-@author: HLR
+    Run cypher queries 
 '''
+__author__ = "Héctor Luis Rodriguez"
+__copyright__ = "Copyright 2022, CAST Software"
+__credits__ = ["Héctor Luis Rodriguez","Nevin Kaplan"]
 
 from neo4j import GraphDatabase 
 from neo4j.exceptions import ServiceUnavailable
@@ -47,6 +48,8 @@ class Neo4jConnection(object):
         except ServiceUnavailable as e:
             self.__log.error(f'Connection Error: {e}')
             quit()
+        except ValueError as e:
+            self.__log.error(f"Query failed: {e}")
         except Exception as e:
             self.__log.error(f"Query failed: {e.message}")
 
