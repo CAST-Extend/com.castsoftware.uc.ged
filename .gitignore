@@ -129,3 +129,6 @@ dmypy.json
 .pyre/
 /LICENSE
 /runEmbeddedPythonLibs.bat
+/ExtLibs/
+/Python/
+/runEmbeddedDependencies.bat
