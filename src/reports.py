@@ -30,17 +30,15 @@ def ProjectBOMfromHighLight(domainId, hl_app_name, report_path, connHL, aip_name
 
 def GenerateProjectBOM(componentsMapping, report_path, aip_name, schema_prefix, connCSS, connNeo4j):   
     outputFile = f'{report_path}/{aip_name}_Project_BOM.xlsx'
-    writer = pd.ExcelWriter(outputFile)
+    writer = pd.ExcelWriter(outputFile, engine='xlsxwriter')
     
     repoNames = []
     frameworkList = []
     associatedFrameworks = []
-    #auSheetList = {}
     projectInformation = ProjectsInformation(schema_prefix, connCSS)
     projectPaths = ''
     if not projectInformation.empty and len(componentsMapping) > 0:
         for projectName, projectPath in zip(projectInformation['Project Name'], projectInformation['Project Path']):
-            #log.info(f'Project path: {projectPath}')
             referenceSplit = projectPath.split("\\")
             repoIndex = referenceSplit.index("Analyzed")+1
             repositoryName = referenceSplit[repoIndex]
@@ -116,12 +114,42 @@ def GenerateProjectBOM(componentsMapping, report_path, aip_name, schema_prefix, 
         projectInformation = pd.concat([projectInformation, cppRepoDf]) 
 
     frameworkDf = pd.DataFrame(frameworkList)
-    frameworkDf.to_excel(writer, sheet_name="Project_BOM(Bill of Material)", index=False)
-    projectInformation.to_excel(writer, sheet_name="Project_TechnologyVersion", index=False)
+    #frameworkDf.to_excel(writer, sheet_name="Project_BOM(Bill of Material)", index=False)
+    add_tab(writer, frameworkDf, "Project_BOM(Bill of Material)", 30)
+    #projectInformation.to_excel(writer, sheet_name="Project_TechnologyVersion", index=False)
+    add_tab(writer, projectInformation, "Project_TechnologyVersion", 30)
     orphanFrameworkDf = pd.DataFrame(remainingOrphanFrameworks)
-    orphanFrameworkDf.to_excel(writer, sheet_name="Orphan Frameworks", index=False)
+    #orphanFrameworkDf.to_excel(writer, sheet_name="Orphan Frameworks", index=False)
+    add_tab(writer, orphanFrameworkDf, "Orphan Frameworks", 40)
     writer.save()
     log.info('Successfully generated {0}'.format(outputFile))
+    
+def add_tab(writer, data, name, width):
+        data.to_excel(writer, index=False, sheet_name=name, startrow=1,header=False)
+
+        workbook = writer.book
+        header_format = workbook.add_format({'text_wrap':True,'align': 'center'})
+
+        worksheet = writer.sheets[name]
+        rows = len(data)
+        cols = len(data.columns)-1
+        
+        columns=[]
+        for col_num, value in enumerate(data.columns.values):
+            columns.append({'header': value})
+
+        table_options={
+                    'columns':columns,
+                    'header_row':True,
+                    'autofilter':True,
+                    'banded_rows':True
+                    }
+        worksheet.add_table(0, 0, rows, cols,table_options)
+
+        for col_num, value in enumerate(data.columns.values):
+            worksheet.write(0, col_num, value, header_format)
+            worksheet.set_column(col_num, col_num, width)
+        return worksheet
         
 def ApplicationComponentsMapping(domainId, hl_app_name, connHL):
     applicationId = connHL.get_application_id(domainId, hl_app_name)
@@ -189,8 +217,11 @@ def CppRepo(aip_name, connNeo4j):
 def GenericRuleResultsReport(rule_id, schema_prefix, connAipRest, outputFile):
     dtf_results = connAipRest.get_rule_violations(schema_prefix, rule_id) 
     if not dtf_results.empty:
-        with pd.ExcelWriter(outputFile) as writer:
-            dtf_results.to_excel(writer, sheet_name="Violations", index=False)
+        #with pd.ExcelWriter(outputFile) as writer:
+        #    dtf_results.to_excel(writer, sheet_name="Violations", index=False)
+        writer = pd.ExcelWriter(outputFile, engine='xlsxwriter')
+        add_tab(writer, dtf_results, "Violations", 30)
+        writer.save()
         log.info('Successfully generated {0}'.format(outputFile))
     else:
         log.warning('No results available')
@@ -242,9 +273,9 @@ def CheckStatusAndDownloadReport(appName, report_path, connImagingRest, standard
         log.debug(f'Report {report} Status {status} Name {reportName}')
         if status == 'Done':
             report_id = GetReportId(reportName)
-            outputFile = f'{report_path}/{appName}_{CleanNameForReport(reportName)}.csv'
+            outputFile = f'{report_path}/{appName}_{CleanNameForReport(reportName)}'
             log.info(f'Generating Report ID {report_id} - {outputFile}')
-            StandardImagingReport(appName, outputFile, report_id, connImagingRest)
+            StandardImagingReport(appName, outputFile, report_id, CleanNameForReport(reportName), connImagingRest)
             standardReportsUuid.remove(report)
     return standardReportsUuid
     
@@ -264,17 +295,18 @@ def GetReportId(reportName):
             }
         return switcher.get(reportName, 0)    
 
-def StandardImagingReport(app_name, outputFile, report_id, connImagingRest):
+def StandardImagingReport(app_name, outputFile, report_id, reportName, connImagingRest):
     dtf_results = connImagingRest.GetReport(app_name, report_id)
     if not dtf_results.empty:
-        dtf_results.to_csv(outputFile, index = False)
+        #dtf_results.to_csv(outputFile, index = False)
+        generateImagingReport(dtf_results, outputFile, reportName)
         log.info('Successfully generated {0}'.format(outputFile))
     else:
         log.warning('No results available')
 
 def DBObjects(app_name, report_path, connImagingRest):
     log.info('Starting DB Objects report generation...')
-    outputFile = '{0}/{1}_DB_Objects.csv'.format(report_path,app_name)
+    outputFile = '{0}/{1}_DB_Objects'.format(report_path,app_name)
     dbObjects = connImagingRest.GetDBObjects(app_name)
     if len(dbObjects) > 0:
         nodes = []
@@ -287,7 +319,8 @@ def DBObjects(app_name, report_path, connImagingRest):
         jsonData = '{' + data + '}'
         dtf_results = connImagingRest.ExportView(app_name, jsonData)
         if not dtf_results.empty:
-            dtf_results.to_csv(outputFile, index = False)
+            #dtf_results.to_csv(outputFile, index = False)
+            generateImagingReport(dtf_results, outputFile, 'DB_Objects')
             log.info('Successfully generated {0}'.format(outputFile))
         else:
             log.warning('No results available')
@@ -296,11 +329,25 @@ def DBObjects(app_name, report_path, connImagingRest):
 
 def APIInteractions(app_name, report_path, connImagingRest):
     log.info('Starting API Interactions report generation...')
-    outputFile = '{0}/{1}_API_Interactions.csv'.format(report_path,app_name)
+    outputFile = '{0}/{1}_API_Interactions'.format(report_path,app_name)
     apiNodes = connImagingRest.APILevel5Nodes(app_name)
     dtf_results = connImagingRest.ExportView(app_name, apiNodes)
     if not dtf_results.empty:
-        dtf_results.to_csv(outputFile, index = False)
+        #dtf_results.to_csv(outputFile, index = False)
+        generateImagingReport(dtf_results, outputFile, 'API_Interactions')
         log.info('Successfully generated {0}'.format(outputFile))
     else:
         log.warning('No results available')
+        
+def generateImagingReport(data, outputFile, sheetName):
+    excelMaxRows = 1048576
+    if len(data.index) >=  excelMaxRows:
+        log.warning(f'Too much rows for an Excel file for {outputFile} - Generating CSV version instead')
+        outputFile = outputFile + '.csv'
+        data.to_csv(outputFile, index = False)
+    else:
+        outputFile = outputFile + '.xlsx'
+        writer = pd.ExcelWriter(outputFile, engine='xlsxwriter')
+        add_tab(writer, data, sheetName, 20)
+        writer.save()
+    

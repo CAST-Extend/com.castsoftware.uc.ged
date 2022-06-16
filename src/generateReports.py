@@ -37,16 +37,10 @@ if __name__ == '__main__':
             
             # Project BOM report
             projectBomDir = c.report_path + '/Project_BOM'
-            summaryInfoDir = c.report_path + '/Summary_Information'
-            
             if not os.path.exists(projectBomDir):
                 os.makedirs(projectBomDir)
-            if not os.path.exists(summaryInfoDir):
-                os.makedirs(summaryInfoDir)
-            
             connNeo4j = Neo4jConnection(c.neo4j_host, c.neo4j_port, c.neo4j_user, c.neo4j_password)
             connCSS = CssConnection(c.css_host, c.css_port, c.css_user, c.css_password)
-            
             if c.HIGHLIGHT:
                 connHL = HighlightRestCall(c.hl_url, c.hl_user, c.hl_password)
                 reports.ProjectBOMfromHighLight(c.hl_domain_id, c.hl_application_name, projectBomDir, connHL, c.aip_name, c.aip_triplet_prefix, connCSS, connNeo4j)
