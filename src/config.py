@@ -29,7 +29,7 @@ class Config(Logger):
                 if v not in self.__config or len(self.__config[v]) == 0:
                     raise ValueError(f"Required field '{v}' is missing from config.json")
 
-            for v in ['AIP','NEO4J','CSS','IMAGING','HIGHLIGHT']:
+            for v in ['AIP','NEO4J','CSS','IMAGING','HIGHLIGHT','LOCAL_BOM_REPORT']:
                 json = self.__config[v]
                 if 'active' not in json or json['active'] == True:
                     self.__config[v]['active']=True
