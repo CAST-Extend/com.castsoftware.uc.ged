@@ -1,5 +1,101 @@
 [
 	{
+        "report": "{config.aip_name}_Project_Calls",
+        "ouputFolder" : "Summary_Information",
+        "tabs": [
+            {
+                "queryName": "Project Calls",
+            	"queryType" : "css",
+                "query": [
+		"create temp table ged_all_projects as",
+        "select coalesce(cjp.object_name, cja.object_name) as projectName, coalesce(cjp.rootpath, 'N/A') as rootPath, cja.object_id as analysisId",
+        "from {config.aip_triplet_prefix}_mngt.cms_j2ee_project cjp ",
+        "    right outer join {config.aip_triplet_prefix}_mngt.cms_j2ee_analysis cja on cjp.object_id = cja.project_id",
+        "union all ",
+        "select coalesce(cjp.object_name, cja.object_name) as projectName, coalesce(cjp.rootpath, 'N/A') as rootPath, cja.object_id as analysisId",
+        "from {config.aip_triplet_prefix}_mngt.cms_ua_project cjp ",
+        "    right outer join {config.aip_triplet_prefix}_mngt.cms_ua_analysis cja on cjp.object_id = cja.project_id",
+        "  union all ",
+        "select coalesce(cjp.object_name, cja.object_name) as projectName, coalesce(cjp.rootpath, 'N/A') as rootPath, cja.object_id as analysisId",
+        "from {config.aip_triplet_prefix}_mngt.cms_net_project cjp ",
+        "    right outer join {config.aip_triplet_prefix}_mngt.cms_net_analysis cja on cjp.object_id = cja.project_id",
+        "  union all ",
+        "select coalesce(cjp.object_name, cja.object_name) as projectName, coalesce(cjp.rootpath, 'N/A') as rootPath, cja.object_id as analysisId",
+        "from {config.aip_triplet_prefix}_mngt.cms_vb_project cjp ",
+        "    right outer join {config.aip_triplet_prefix}_mngt.cms_vb_analysis cja on cjp.object_id = cja.project_id  ",
+        "  union all ",
+        "select coalesce(cjp.object_name, cja.object_name) as projectName, coalesce(cjp.rootpath, 'N/A') as rootPath, cja.object_id as analysisId",
+        "from {config.aip_triplet_prefix}_mngt.cms_cpp_project cjp ",
+        "    right outer join {config.aip_triplet_prefix}_mngt.cms_cpp_analysis cja on cjp.object_id = cja.project_id  ",
+        "  union all ",
+        "select coalesce(cjp.object_name, cja.object_name) as projectName, coalesce(cjp.rootpath, 'N/A') as rootPath, cja.object_id as analysisId",
+        "from {config.aip_triplet_prefix}_mngt.cms_asp_project cjp ",
+        " right outer join {config.aip_triplet_prefix}_mngt.cms_asp_analysis cja on cjp.object_id = cja.project_id;",
+		"create temp table ged_all_projects_objects as",
+        "select gap.projectName, gap.rootPath, gap.analysisId, psso.object_id as objectId",
+        "from ged_all_projects gap",
+        " join {config.aip_triplet_prefix}_mngt.cms_dynamicfields cdf on gap.analysisId = cdf.object_id",
+        " join {config.aip_triplet_prefix}_local.PMC_SUBSETS pss on pss.subset_name = 'CMS_AU_FULL__'||cdf.field_value",
+        " join {config.aip_triplet_prefix}_local.PMC_SUBSET_OBJECTS psso on psso.SUBSET_ID = pss.SUBSET_ID",
+        " join {config.aip_triplet_prefix}_local.cdt_objects co on psso.object_id = co.object_id",
+		"where co.object_type_str not like '%%Instantiated%%' and co.object_type_str not like 'WSDL%%';",
+		"create temp table ged_all_projects_objects_links as",
+		"select caller.projectName callerProjectName, caller.rootPath callerRootPath, caller.analysisId callerProjectId, caller.objectId callerObjectId, ",
+		" callee.projectName calledProjectName, callee.rootPath calledRootPath, callee.analysisId calledProjectId, callee.objectId calledObjectId",
+		"from ged_all_projects_objects caller, ",
+		" ged_all_projects_objects callee, ",
+		" {config.aip_triplet_prefix}_local.acc links",
+		"where",
+		" links.accknd = any(array[0, 4096, 262144, 1048576])",
+		" and links.prop & 65536 = 0",
+		" and caller.analysisId != callee.analysisId",
+		" and caller.objectId = links.idclr",
+		" and callee.objectId = links.idcle;",
+		"select callerProjectName as \"Caller Project\", callerRootPath as \"Caller Project Path\", calledProjectName as \"Called Project\", calledRootPath as \"Called Project Path\", count(1) as \"Number of Calls\"",
+		"from ged_all_projects_objects_links",
+		"group by callerProjectName, callerRootPath, calledProjectName, calledRootPath",
+		"order by callerProjectName, calledProjectName"
+                ],
+                "formating": {
+                    "Caller Project": {
+                        "width": 30
+                    },
+                    "Caller Project Path": {
+                        "width": 60
+                    },
+                    "Called Project": {
+                        "width": 30
+                    },
+                    "Called Project Path": {
+                        "width": 60
+                    },
+                    "Number of Calls": {
+                        "width": 15
+                    }
+                }
+            }
+        ]
+    },
+    {
+        "report": "{config.aip_name}_Code_DB_Reference_Summary",
+        "ouputFolder" : "Summary_Information",
+        "tabs": [
+            {
+                "queryName": "Code DB Reference Summary",
+            	"queryType" : "cypher",
+                "query": [
+                    "MATCH(m:Module:{config.aip_name})-[:Contains]->(o:{config.aip_name})<-[r]-(other:{config.aip_name})",
+					"WHERE (other:Object OR other:SubObject ) AND (o:Object OR o:SubObject) AND type(r) IN",
+						"(['CALL', 'ESCALATED']) ",
+					 	"With o,  other,m ",
+					 	"Optional MATCH (o)-[r1]->(p1:ObjectProperty) WHERE p1.Description=\"File\" ",
+						"With o,other,m ,r1.value as Path ",
+					"RETURN o.FullName as `Object FullName`,o.Name as `Object Name`,o.Type as `Object Type`,Path as `Object Path`,m.Name as `Repository Name`,COUNT(DISTINCT other)  as `References Count`"
+                ]
+            }
+        ]
+    },
+    {
         "report": "{config.aip_name}_Repository_Complexity",
         "ouputFolder" : "Summary_Information",
         "tabs": [
@@ -7,7 +103,7 @@
                 "queryName": "Repository Complexity",
             	"queryType" : "cypher",
                 "query": [
-                    "MATCH (n:Module:ATCS)-[:Contains]->(o:ATCS)-[r:Property]->(p:ObjectProperty)",
+                    "MATCH (n:Module:{config.aip_name})-[:Contains]->(o:{config.aip_name})-[r:Property]->(p:ObjectProperty)",
 					"WHERE (o:Object OR o:SubObject) AND p.Description IN [\"Cyclomatic Complexity\", \"Essential Complexity\", \"Integration Complexity\", \"Number of code lines\"]",
 						"WITH p.Description AS dynamicKey, SUM(toInteger(r.value)) AS dynamicValue,n",
 						"WITH apoc.map.fromValues([dynamicKey,dynamicValue]) as pr,n",
@@ -532,7 +628,7 @@
                 "queryName": "MainCallingShellProgram",
             	"queryType" : "cypher",
                 "query": [
-                    "MATCH (caller:Object:{config.aip_name})-[:CALL]->(callee:Object:ATCS)",
+                    "MATCH (caller:Object:{config.aip_name})-[:CALL]->(callee:Object:{config.aip_name})",
 					"WHERE caller.Type='SHELL Program' ",
 					"AND NOT (()-[:CALL]->(caller)) ",
 					"RETURN caller.Name,caller.FullName,caller.Type,SPLIT(caller.FullName,'\\\\')[5] as CallerRepositoryName ,callee.Name,callee.FullName,callee.Type,SPLIT(callee.FullName,'\\\\')[5] as CalleeRepositoryName "
