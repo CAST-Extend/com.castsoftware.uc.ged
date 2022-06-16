@@ -114,12 +114,9 @@ def GenerateProjectBOM(componentsMapping, report_path, aip_name, schema_prefix, 
         projectInformation = pd.concat([projectInformation, cppRepoDf]) 
 
     frameworkDf = pd.DataFrame(frameworkList)
-    #frameworkDf.to_excel(writer, sheet_name="Project_BOM(Bill of Material)", index=False)
     add_tab(writer, frameworkDf, "Project_BOM(Bill of Material)", 30)
-    #projectInformation.to_excel(writer, sheet_name="Project_TechnologyVersion", index=False)
     add_tab(writer, projectInformation, "Project_TechnologyVersion", 30)
     orphanFrameworkDf = pd.DataFrame(remainingOrphanFrameworks)
-    #orphanFrameworkDf.to_excel(writer, sheet_name="Orphan Frameworks", index=False)
     add_tab(writer, orphanFrameworkDf, "Orphan Frameworks", 40)
     writer.save()
     log.info('Successfully generated {0}'.format(outputFile))
@@ -217,8 +214,6 @@ def CppRepo(aip_name, connNeo4j):
 def GenericRuleResultsReport(rule_id, schema_prefix, connAipRest, outputFile):
     dtf_results = connAipRest.get_rule_violations(schema_prefix, rule_id) 
     if not dtf_results.empty:
-        #with pd.ExcelWriter(outputFile) as writer:
-        #    dtf_results.to_excel(writer, sheet_name="Violations", index=False)
         writer = pd.ExcelWriter(outputFile, engine='xlsxwriter')
         add_tab(writer, dtf_results, "Violations", 30)
         writer.save()
@@ -298,7 +293,6 @@ def GetReportId(reportName):
 def StandardImagingReport(app_name, outputFile, report_id, reportName, connImagingRest):
     dtf_results = connImagingRest.GetReport(app_name, report_id)
     if not dtf_results.empty:
-        #dtf_results.to_csv(outputFile, index = False)
         generateImagingReport(dtf_results, outputFile, reportName)
         log.info('Successfully generated {0}'.format(outputFile))
     else:
@@ -319,7 +313,6 @@ def DBObjects(app_name, report_path, connImagingRest):
         jsonData = '{' + data + '}'
         dtf_results = connImagingRest.ExportView(app_name, jsonData)
         if not dtf_results.empty:
-            #dtf_results.to_csv(outputFile, index = False)
             generateImagingReport(dtf_results, outputFile, 'DB_Objects')
             log.info('Successfully generated {0}'.format(outputFile))
         else:
@@ -333,7 +326,6 @@ def APIInteractions(app_name, report_path, connImagingRest):
     apiNodes = connImagingRest.APILevel5Nodes(app_name)
     dtf_results = connImagingRest.ExportView(app_name, apiNodes)
     if not dtf_results.empty:
-        #dtf_results.to_csv(outputFile, index = False)
         generateImagingReport(dtf_results, outputFile, 'API_Interactions')
         log.info('Successfully generated {0}'.format(outputFile))
     else:

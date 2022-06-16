@@ -139,22 +139,3 @@ class QueryEngine():
             worksheet.set_column(col_num, col_num, fmt['width'])
 
         return worksheet
-
-    # def updateQueryFile(self):
-    #     if self.__query_modified:
-    #         with open("query.json", 'w') as query_file:
-    #             dump(self.__data,query_file, ensure_ascii=False, indent=4)
-
-
-# import argparse
-# from config import Config
-
-# log = Logger()
-# parser = argparse.ArgumentParser(description='AT&T - SDS - Modernization - Report Generation Tool')
-# parser.add_argument('-c','--config', required=True, help='Configuration properties file')
-# args = parser.parse_args()
-# c = Config(args.config)
-
-# cypher = QueryEngine(c,log_level=INFO)
-# cypher.run()
-# #cypher.updateQueryFile()
