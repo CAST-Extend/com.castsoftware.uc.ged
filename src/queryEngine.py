@@ -46,64 +46,70 @@ class QueryEngine():
             self.log.error(msg)
 
     def run(self):
+        
         for rpt in self.__data:
-            if 'ouputFolder' not in rpt:
-                self.log.error('Missing report ouputFolder')
-                continue
-            output_folder = f"{self.__config.report_path}/{rpt['ouputFolder']}"
-            
-            if not os.path.exists(output_folder):
-                makedirs(output_folder)
-
-            filename = rpt['report'].replace('{config.aip_name}',self.__config.aip_name)
-            filename = f'{output_folder}/{filename}.xlsx'
-            self.log.info(f'Working on {filename}')
-
-            # Create a Pandas Excel writer using XlsxWriter as the engine.
-            writer = ExcelWriter(filename, engine='xlsxwriter')
-
-            tab_df=[]
-            any_tabs = False
-            for tab in rpt['tabs']:
-                if 'queryName' not in tab:
-                    self.log.error(f'Missing queryName for {filename}')
+            try:
+                if 'ouputFolder' not in rpt:
+                    self.log.error('Missing report ouputFolder')
                     continue
-                tab_name = tab['queryName']
-
-                if 'queryType' not in tab:
-                    self.log.error(f'Missing queryType for {filename}/{tab_name}')
-                    continue
-                query_type = tab['queryType']
-
-                self.log.info(f'Running {query_type} query for {tab_name}')
-                query =" ".join( tab['query'])
-                query=query.replace('{config.aip_name}',self.__config.aip_name)
-                query=query.replace('{config.aip_triplet_prefix}',self.__config.aip_triplet_prefix)
-
-                #what type of query are we making?
-                #curently there are 2 choices, cypher and css
-                if query_type == 'cypher':
-                    df = self.connNeo4j.dfquery(query)
-                elif query_type == 'css':
-                    df = self.connCSS.dfquery(query)
+                output_folder = f"{self.__config.report_path}/{rpt['ouputFolder']}"
+                
+                if not os.path.exists(output_folder):
+                    makedirs(output_folder)
+    
+                filename = rpt['report'].replace('{config.aip_name}',self.__config.aip_name)
+                filename = f'{output_folder}/{filename}.xlsx'
+                self.log.info(f'Working on {filename}')
+    
+                # Create a Pandas Excel writer using XlsxWriter as the engine.
+                writer = ExcelWriter(filename, engine='xlsxwriter')
+                
+    
+                tab_df=[]
+                any_tabs = False
+                for tab in rpt['tabs']:
+                    if 'queryName' not in tab:
+                        self.log.error(f'Missing queryName for {filename}')
+                        continue
+                    tab_name = tab['queryName']
+    
+                    if 'queryType' not in tab:
+                        self.log.error(f'Missing queryType for {filename}/{tab_name}')
+                        continue
+                    query_type = tab['queryType']
+    
+                    self.log.info(f'Running {query_type} query for {tab_name}')
+                    query =" ".join( tab['query'])
+                    query=query.replace('{config.aip_name}',self.__config.aip_name)
+                    query=query.replace('{config.aip_triplet_prefix}',self.__config.aip_triplet_prefix)
+    
+                    #what type of query are we making?
+                    #curently there are 2 choices, cypher and css
+                    if query_type == 'cypher':
+                        df = self.connNeo4j.dfquery(query)
+                    elif query_type == 'css':
+                        df = self.connCSS.dfquery(query)
+                    else:
+                        raise self.log.error(f'Missing query_type for {filename}/{tab_name}')
+    
+                    if not df.empty:
+                        df.replace(to_replace=['http://', 'https://'], value='', inplace=True, regex=True)
+                        any_tabs = True
+                        columns = None
+                        if not 'formating' in tab:
+                            tab['formating'] = {}
+                        self._add_tab(writer,df,tab_name,tab['formating'])
+                    else: self.log.warning('No results available') 
+    
+                if any_tabs:
+                    writer.save()
+                    self.log.info(f'Successfully generated {filename}')
                 else:
-                    raise self.log.error(f'Missing query_type for {filename}/{tab_name}')
-
-                if not df.empty:
-                    any_tabs = True
-                    columns = None
-                    if not 'formating' in tab:
-                        tab['formating'] = {}
-                    self._add_tab(writer,df,tab_name,tab['formating'])
-                else: self.log.warning('No results available') 
-
-            if any_tabs:
-                writer.save()
-                self.log.info(f'Successfully generated {filename}')
-            else:
-                writer.close()
-                os.remove(filename)
-                self.log.warning(f'No data for report generation')
+                    writer.close()
+                    os.remove(filename)
+                    self.log.warning(f'No data for report generation')
+            except Exception as e:
+                self.log.error(f"Error generating report: {e}")
     
     def _add_tab(self,writer,data,name,formatting):
         data.to_excel(writer, index=False, sheet_name=name, startrow=1,header=False)

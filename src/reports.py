@@ -29,9 +29,7 @@ def ProjectBOMfromHighLight(domainId, hl_app_name, report_path, connHL, aip_name
     GenerateProjectBOM(componentsMapping, report_path, aip_name, schema_prefix, connCSS, connNeo4j)
 
 def GenerateProjectBOM(componentsMapping, report_path, aip_name, schema_prefix, connCSS, connNeo4j):   
-    outputFile = f'{report_path}/{aip_name}_Project_BOM.xlsx'
-    writer = pd.ExcelWriter(outputFile, engine='xlsxwriter')
-    
+       
     repoNames = []
     frameworkList = []
     associatedFrameworks = []
@@ -112,14 +110,22 @@ def GenerateProjectBOM(componentsMapping, report_path, aip_name, schema_prefix, 
     if len(cppRepoList) > 0: 
         cppRepoDf = pd.DataFrame(cppRepoList).drop_duplicates()
         projectInformation = pd.concat([projectInformation, cppRepoDf]) 
-
-    frameworkDf = pd.DataFrame(frameworkList)
-    add_tab(writer, frameworkDf, "Project_BOM(Bill of Material)", 30)
-    add_tab(writer, projectInformation, "Project_TechnologyVersion", 30)
-    orphanFrameworkDf = pd.DataFrame(remainingOrphanFrameworks)
-    add_tab(writer, orphanFrameworkDf, "Orphan Frameworks", 40)
-    writer.save()
-    log.info('Successfully generated {0}'.format(outputFile))
+    
+    try:
+        outputFile = f'{report_path}/{aip_name}_Project_BOM.xlsx'
+        writer = pd.ExcelWriter(outputFile, engine='xlsxwriter')
+        frameworkDf = pd.DataFrame(frameworkList)
+        frameworkDf.replace(to_replace=['http://', 'https://'], value='', inplace=True, regex=True)
+        add_tab(writer, frameworkDf, "Project_BOM(Bill of Material)", 30)
+        projectInformation.replace(to_replace=['http://', 'https://'], value='', inplace=True, regex=True)
+        add_tab(writer, projectInformation, "Project_TechnologyVersion", 30)
+        orphanFrameworkDf = pd.DataFrame(remainingOrphanFrameworks)
+        orphanFrameworkDf.replace(to_replace=['http://', 'https://'], value='', inplace=True, regex=True)
+        add_tab(writer, orphanFrameworkDf, "Orphan Frameworks", 40)
+        writer.save()
+        log.info('Successfully generated {0}'.format(outputFile))
+    except Exception as e:
+            self.log.error(f"Error generating report: {e}")
     
 def add_tab(writer, data, name, width):
         data.to_excel(writer, index=False, sheet_name=name, startrow=1,header=False)
@@ -214,10 +220,14 @@ def CppRepo(aip_name, connNeo4j):
 def GenericRuleResultsReport(rule_id, schema_prefix, connAipRest, outputFile):
     dtf_results = connAipRest.get_rule_violations(schema_prefix, rule_id) 
     if not dtf_results.empty:
-        writer = pd.ExcelWriter(outputFile, engine='xlsxwriter')
-        add_tab(writer, dtf_results, "Violations", 30)
-        writer.save()
-        log.info('Successfully generated {0}'.format(outputFile))
+        try:
+            writer = pd.ExcelWriter(outputFile, engine='xlsxwriter')
+            dtf_results.replace(to_replace=['http://', 'https://'], value='', inplace=True, regex=True)
+            add_tab(writer, dtf_results, "Violations", 30)
+            writer.save()
+            log.info('Successfully generated {0}'.format(outputFile))
+        except Exception as e:
+            self.log.error(f"Error generating report: {e}")
     else:
         log.warning('No results available')
         
@@ -338,8 +348,12 @@ def generateImagingReport(data, outputFile, sheetName):
         outputFile = outputFile + '.csv'
         data.to_csv(outputFile, index = False)
     else:
-        outputFile = outputFile + '.xlsx'
-        writer = pd.ExcelWriter(outputFile, engine='xlsxwriter')
-        add_tab(writer, data, sheetName, 20)
-        writer.save()
+        try:
+            outputFile = outputFile + '.xlsx'
+            writer = pd.ExcelWriter(outputFile, engine='xlsxwriter')
+            data.replace(to_replace=['http://', 'https://'], value='', inplace=True, regex=True)
+            add_tab(writer, data, sheetName, 20)
+            writer.save()
+        except Exception as e:
+            self.log.error(f"Error generating report: {e}")
     

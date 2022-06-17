@@ -1,8 +1,56 @@
 [
 	{
+        "report": "{config.aip_name}_Code_DB_Reference_Summary",
+        "ouputFolder" : "Summary_Information",
+        "tabs": [
+            {
+                "queryName": "Glossary",
+            	"queryType" : "css",
+                "query": [
+                    "select 'Number of Referenced Object is displayed wrt to the Code and DB'",
+					    "as \"Report Information - Summary\"", 
+					"union",
+					"select 'This is the parent excel for the first sheet on Code.xslx and DB.xlsx. The contents on this file are split between Code and DB.'",
+						"as \"Report Information - Summary\""
+                ],
+                "formating": {
+                    "Report Information - Summary": {
+                        "width": 200
+                    }
+                }
+            },
+            {
+                "queryName": "Code DB Reference Summary",
+            	"queryType" : "cypher",
+                "query": [
+                    "MATCH(m:Module:{config.aip_name})-[:Contains]->(o:{config.aip_name})<-[r]-(other:{config.aip_name})",
+					"WHERE (other:Object OR other:SubObject ) AND (o:Object OR o:SubObject) AND type(r) IN",
+						"(['CALL', 'ESCALATED']) ",
+					 	"With o,  other,m ",
+					 	"Optional MATCH (o)-[r1]->(p1:ObjectProperty) WHERE p1.Description=\"File\" ",
+						"With o,other,m ,r1.value as Path ",
+					"RETURN o.FullName as `Object FullName`,o.Name as `Object Name`,o.Type as `Object Type`,Path as `Object Path`,m.Name as `Repository Name`,COUNT(DISTINCT other)  as `References Count`"
+                ]
+            }
+        ]
+    },
+    {
         "report": "{config.aip_name}_Project_Calls",
         "ouputFolder" : "Summary_Information",
         "tabs": [
+        	{
+                "queryName": "Glossary",
+            	"queryType" : "css",
+                "query": [
+                    "select 'Number of calls between application projects'",
+					    "as \"Report Information - Summary\"" 
+                ],
+                "formating": {
+                    "Report Information - Summary": {
+                        "width": 100
+                    }
+                }
+            },
             {
                 "queryName": "Project Calls",
             	"queryType" : "css",
@@ -73,25 +121,6 @@
                         "width": 15
                     }
                 }
-            }
-        ]
-    },
-    {
-        "report": "{config.aip_name}_Code_DB_Reference_Summary",
-        "ouputFolder" : "Summary_Information",
-        "tabs": [
-            {
-                "queryName": "Code DB Reference Summary",
-            	"queryType" : "cypher",
-                "query": [
-                    "MATCH(m:Module:{config.aip_name})-[:Contains]->(o:{config.aip_name})<-[r]-(other:{config.aip_name})",
-					"WHERE (other:Object OR other:SubObject ) AND (o:Object OR o:SubObject) AND type(r) IN",
-						"(['CALL', 'ESCALATED']) ",
-					 	"With o,  other,m ",
-					 	"Optional MATCH (o)-[r1]->(p1:ObjectProperty) WHERE p1.Description=\"File\" ",
-						"With o,other,m ,r1.value as Path ",
-					"RETURN o.FullName as `Object FullName`,o.Name as `Object Name`,o.Type as `Object Type`,Path as `Object Path`,m.Name as `Repository Name`,COUNT(DISTINCT other)  as `References Count`"
-                ]
             }
         ]
     },
