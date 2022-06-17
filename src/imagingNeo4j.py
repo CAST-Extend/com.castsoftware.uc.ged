@@ -47,7 +47,6 @@ class Neo4jConnection(object):
                 self.__log.warning("Query ran successfuly but return no results")
         except ServiceUnavailable as e:
             self.__log.error(f'Connection Error: {e}')
-            quit()
         except ValueError as e:
             self.__log.error(f"Query failed: {e}")
         except Exception as e:

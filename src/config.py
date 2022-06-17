@@ -23,7 +23,7 @@ class Config(Logger):
                 self.__config = load(config_file)
 
             # AIP must always be active
-            self.__config['AIP']['active']=True
+            # self.__config['AIP']['active']=True
 
             for v in ['report_path','AIP','NEO4J','CSS','IMAGING','HIGHLIGHT','LOCAL_BOM_REPORT']:
                 if v not in self.__config or len(self.__config[v]) == 0:

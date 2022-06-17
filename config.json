@@ -2,6 +2,7 @@
   "report_path" : "C:/temp",
   
   "AIP":{
+  	"active" : true,
     "name" : "ATCS",
     "triplet_prefix": "atcs",
     "url" : "http://localhost:8080/rest/",
@@ -26,7 +27,7 @@
   },
   
   "IMAGING": {
-    "active": false,
+    "active": true,
     "url" : "http://localhost:8083/",
     "api_key" : "6r3MqPPQ.9NvrJpsIJX3WcMIOtjS148pajzCDDHV9"
   },
@@ -41,7 +42,7 @@
   },
   
   "LOCAL_BOM_REPORT":{ 
-  	"active" : false,
+  	"active" : true,
   	"report_path" : "C:/Users/hlr/Desktop/ATT/Project_BOM/Inputs/ATCS_BOM.xlsx"
   }
   

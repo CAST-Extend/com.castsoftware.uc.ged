@@ -11,7 +11,7 @@ import pandas as pd
 class AipRestCall(RestCall):
     
     def get_domain(self, schema_name):
-        domain_id = None
+        domain_id = "0"
         (status,json) = self.get()
         if status == codes["ok"]:
             try: 
@@ -19,7 +19,7 @@ class AipRestCall(RestCall):
             except IndexError:
                 self.error('Domain not found for schema {0}'.format(schema_name))
         if status == 0:
-            domain_id = -1        
+            domain_id = "-1" 
         return domain_id
     
     def get_latest_snapshot(self, domain_id):
@@ -38,14 +38,16 @@ class AipRestCall(RestCall):
         rules = set({})
         
         domain_id = self.get_domain(schema_name)
-        latest_snapshot_id = self.get_latest_snapshot(domain_id)["id"]
-        url = '{0}/applications/3/snapshots/{1}/action-plan/issues?startRow=1&nbRows=10000'.format(domain_id,latest_snapshot_id)
-        
-        (status, json) = self.get(url)
-        if status == codes['ok'] and len(json) > 0:
-            for violation in json:
-                rules.add((violation['rulePattern']['href'].split('/')[2], violation['rulePattern']['name']))
-        
+        if domain_id != "0" and domain_id != "-1":
+            latest_snapshot = self.get_latest_snapshot(domain_id)
+            if len(latest_snapshot) > 0:
+                latest_snapshot_id = ["id"]
+                url = '{0}/applications/3/snapshots/{1}/action-plan/issues?startRow=1&nbRows=10000'.format(domain_id,latest_snapshot_id)
+                
+                (status, json) = self.get(url)
+                if status == codes['ok'] and len(json) > 0:
+                    for violation in json:
+                        rules.add((violation['rulePattern']['href'].split('/')[2], violation['rulePattern']['name'])) 
         return rules
     
     def get_rules_by_keyword(self, aip_triplet_prefix, keyword):
@@ -53,14 +55,17 @@ class AipRestCall(RestCall):
         rules = set({})
         
         domain_id = self.get_domain(schema_name)
-        latest_snapshot_id = self.get_latest_snapshot(domain_id)["id"]
-        url = '{0}/configuration/snapshots/{1}/quality-rules'.format(domain_id,latest_snapshot_id)
-        
-        (status, json) = self.get(url)
-        if status == codes['ok'] and len(json) > 0:
-            for rule in json:
-                if keyword.lower() in rule['name'].lower():
-                    rules.add((rule['key'],rule['name']))
+        if domain_id != "0" and domain_id != "-1":
+            latest_snapshot = self.get_latest_snapshot(domain_id)
+            if len(latest_snapshot) > 0:
+                latest_snapshot_id = latest_snapshot["id"]
+                url = '{0}/configuration/snapshots/{1}/quality-rules'.format(domain_id,latest_snapshot_id)
+                
+                (status, json) = self.get(url)
+                if status == codes['ok'] and len(json) > 0:
+                    for rule in json:
+                        if keyword.lower() in rule['name'].lower():
+                            rules.add((rule['key'],rule['name']))
         return rules
     
     def get_rule_violations(self, aip_triplet_prefix, rule_id):
